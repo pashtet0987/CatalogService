@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: goods_catalogue_service
+server:
+  port: 8001
