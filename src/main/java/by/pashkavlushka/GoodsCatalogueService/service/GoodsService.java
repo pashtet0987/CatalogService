@@ -25,15 +25,15 @@ public interface GoodsService {
 
     List<GoodsDTO> findByCategory(String category, Pageable pageable);
     
-    List<GoodsDTO> findBySellerId(String sellerId);
+    List<GoodsDTO> findBySellerId(long sellerId);
     
-    List<GoodsDTO> findBySellerId(String sellerId, int pageNum);
+    List<GoodsDTO> findBySellerId(long sellerId, int pageNum);
     
-    List<GoodsDTO> findBySellerId(String sellerId, Pageable pageable);
+    List<GoodsDTO> findBySellerId(long sellerId, Pageable pageable);
 
     GoodsDTO save(GoodsDTO goodsDTO);
     
     boolean addToCart(Long itemId, int amount);
     
-    AddToCartRequest createAddToCartRequest(Long cartId, Long itemId, int amount) throws EntityException;
+    AddToCartRequest validateAddToCartRequest(AddToCartRequest request) throws EntityException;
 }

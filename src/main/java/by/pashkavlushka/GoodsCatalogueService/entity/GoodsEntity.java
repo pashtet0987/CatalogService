@@ -16,6 +16,7 @@ import jakarta.persistence.MapKeyColumn;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -29,9 +30,10 @@ public class GoodsEntity {
     private long id;
     
     @Version
-    private long version;
+    @Column(columnDefinition = "TIMESTAMP(9)")
+    private Instant version;
     
-    private String sellerId;
+    private long sellerId;
     
     private String name;
     
@@ -50,13 +52,15 @@ public class GoodsEntity {
     public GoodsEntity() {
     }
 
-    public GoodsEntity(String name, String category, Map<String, String> characteristics, int cost, String sellerId) {
+    public GoodsEntity(String name, String category, Map<String, String> characteristics, int cost, long sellerId, int amount) {
         this.name = name;
         this.category = category;
         this.characteristics = characteristics;
         this.cost = cost;
         this.sellerId = sellerId;
+        this.amount = amount;
     }
+    
 
     public String getName() {
         return name;
@@ -99,11 +103,11 @@ public class GoodsEntity {
         this.category = category;
     }
 
-    public String getSellerId() {
+    public long getSellerId() {
         return sellerId;
     }
 
-    public void setSellerId(String sellerId) {
+    public void setSellerId(long sellerId) {
         this.sellerId = sellerId;
     }
 
@@ -115,13 +119,12 @@ public class GoodsEntity {
         this.amount = amount;
     }
 
-    public long getVersion() {
+    public Instant getVersion() {
         return version;
     }
 
-    public void setVersion(long version) {
+    public void setVersion(Instant version) {
         this.version = version;
     }
-    
     
 }

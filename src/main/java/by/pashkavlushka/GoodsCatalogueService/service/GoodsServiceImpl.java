@@ -21,6 +21,7 @@ import by.pashkavlushka.GoodsCatalogueService.mapstruct.GoodsMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.OptimisticLockException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 @Service
 public class GoodsServiceImpl implements GoodsService {
@@ -70,21 +71,21 @@ public class GoodsServiceImpl implements GoodsService {
     }
 
     @Transactional
-    public List<GoodsDTO> findBySellerId(String sellerId) {
+    public List<GoodsDTO> findBySellerId(long sellerId) {
         return findBySellerIdDefault(sellerId, defaultPageable);
     }
 
     @Transactional
-    public List<GoodsDTO> findBySellerId(String sellerId, int pageNum) {
+    public List<GoodsDTO> findBySellerId(long sellerId, int pageNum) {
         return findBySellerIdDefault(sellerId, defaultPageable.withPage(pageNum));
     }
 
     @Transactional
-    public List<GoodsDTO> findBySellerId(String sellerId, Pageable pageable) {
+    public List<GoodsDTO> findBySellerId(long sellerId, Pageable pageable) {
         return findBySellerIdDefault(sellerId, pageable);
     }
 
-    private List<GoodsDTO> findBySellerIdDefault(String sellerId, Pageable pageable) {
+    private List<GoodsDTO> findBySellerIdDefault(long sellerId, Pageable pageable) {
         List<GoodsEntity> entities = goodsRepository.findBySellerId(sellerId, pageable).getContent();
         return entities.stream().map((entity) -> parser.entityToDTO(entity)).toList();
     }
@@ -95,7 +96,8 @@ public class GoodsServiceImpl implements GoodsService {
         while (true) {
             try {
                 return addToCartInner(itemId, amount);
-            } catch (OptimisticLockException e) {
+            } catch (ObjectOptimisticLockingFailureException | OptimisticLockException e) {
+
                 //no need to do anything so that the algorithm works again
             } catch (Exception e) {
                 System.out.println(e.getMessage());
@@ -105,23 +107,27 @@ public class GoodsServiceImpl implements GoodsService {
     }
 
     private boolean addToCartInner(Long itemId, int amount) throws EntityException {
-        GoodsEntity entity = goodsRepository.findById(itemId).orElseThrow(() -> new NotFoundEntityException());
+        GoodsEntity entity = entityManager.find(GoodsEntity.class, itemId, LockModeType.PESSIMISTIC_READ);
+        if (entity == null) {
+            throw new NotFoundEntityException();
+        }
+        entityManager.lock(entity, LockModeType.NONE);
         if (entity.getAmount() - amount < 0) {
             return false;
         }
         entity.setAmount(entity.getAmount() - amount);
-        entityManager.refresh(entity, LockModeType.OPTIMISTIC);
+        entityManager.lock(entity, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
+        entityManager.merge(entity);
+        entityManager.lock(entity, LockModeType.NONE);
         return true;
     }
 
     @Override
     @Transactional
-    public AddToCartRequest createAddToCartRequest(Long cartId, Long itemId, int amount) throws EntityException {
-        GoodsEntity entity = goodsRepository.findById(itemId).orElseThrow(()->new NotFoundEntityException());
-        
-        return new AddToCartRequest(cartId, itemId, entity.getName(), entity.getCost(), amount);
+    public AddToCartRequest validateAddToCartRequest(AddToCartRequest request) throws EntityException {
+        GoodsEntity entity = goodsRepository.findById(request.getItemId()).orElseThrow(() -> new NotFoundEntityException());
+        request.setStatus(true);
+        return request;
     }
 
-    
-    
 }

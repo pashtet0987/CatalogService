@@ -8,6 +8,7 @@ import by.pashkavlushka.GoodsCatalogueService.dto.AddToCartRequest;
 import by.pashkavlushka.GoodsCatalogueService.exception.EntityException;
 import by.pashkavlushka.GoodsCatalogueService.service.GoodsService;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,21 +19,18 @@ import org.springframework.web.client.RestClient;
 public class CartController {
     
     private final GoodsService goodsService;
-    private final RestClient restClient;
 
-    public CartController(GoodsService goodsService, RestClient restClient) {
+    public CartController(GoodsService goodsService) {
         this.goodsService = goodsService;
-        this.restClient = restClient;
+
     }
     
     @PostMapping("/")
-    public boolean cart(@RequestParam("cartId") Long cartId
-            , @RequestParam("itemId") Long itemId
-            , @RequestParam("amount") int amount) throws EntityException {
-        if(goodsService.addToCart(itemId, amount)) {
-            return restClient.post().uri("http://cart_service/cart/").body(goodsService.createAddToCartRequest(cartId, itemId, amount))
-                    .retrieve().toEntity(Boolean.class).getBody();
+    public AddToCartRequest cart(@RequestBody AddToCartRequest request) throws EntityException {
+        AddToCartRequest validatedRequest = goodsService.validateAddToCartRequest(request);
+        if(goodsService.addToCart(validatedRequest.getItemId(), validatedRequest.getAmount())) {
+            request.setStatus(true);
         }
-        return false;
+        return request;
     }
 }
