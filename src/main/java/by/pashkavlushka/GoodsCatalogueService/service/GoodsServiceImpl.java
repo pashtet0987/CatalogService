@@ -19,8 +19,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import by.pashkavlushka.GoodsCatalogueService.mapstruct.GoodsMapper;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.OptimisticLockException;
+import java.sql.Connection;
+import java.sql.SQLException;
+import org.hibernate.Session;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 @Service
@@ -29,13 +34,13 @@ public class GoodsServiceImpl implements GoodsService {
     private final Pageable defaultPageable;
     private final GoodsRepository goodsRepository;
     private final GoodsMapper parser;
-    private final EntityManager entityManager;
+    private final EntityManagerFactory entityManagerFactory;
 
-    public GoodsServiceImpl(GoodsRepository goodsRepository, GoodsMapper parser, EntityManager entityManager) {
+    public GoodsServiceImpl(GoodsRepository goodsRepository, GoodsMapper parser, EntityManagerFactory entityManagerFactory) {
         this.defaultPageable = PageRequest.of(0, 30, Sort.by(List.of(Sort.Order.asc("cost"))));
         this.goodsRepository = goodsRepository;
         this.parser = parser;
-        this.entityManager = entityManager;
+        this.entityManagerFactory = entityManagerFactory;
     }
 
     @Transactional
@@ -91,13 +96,12 @@ public class GoodsServiceImpl implements GoodsService {
     }
 
     @Override
-    @Transactional
     public boolean addToCart(Long itemId, int amount) {
         while (true) {
             try {
                 return addToCartInner(itemId, amount);
             } catch (ObjectOptimisticLockingFailureException | OptimisticLockException e) {
-
+                System.out.println(e.getMessage());
                 //no need to do anything so that the algorithm works again
             } catch (Exception e) {
                 System.out.println(e.getMessage());
@@ -106,20 +110,37 @@ public class GoodsServiceImpl implements GoodsService {
         }
     }
 
-    private boolean addToCartInner(Long itemId, int amount) throws EntityException {
-        GoodsEntity entity = entityManager.find(GoodsEntity.class, itemId, LockModeType.PESSIMISTIC_READ);
-        if (entity == null) {
-            throw new NotFoundEntityException();
-        }
-        entityManager.lock(entity, LockModeType.NONE);
-        if (entity.getAmount() - amount < 0) {
+    private boolean addToCartInner(Long itemId, int amount) {
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
+        EntityTransaction transaction = entityManager.getTransaction();
+        transaction.begin();
+      
+        try {
+            //GoodsEntity entity = entityManager.find(GoodsEntity.class, itemId);
+            GoodsEntity entity = entityManager.find(GoodsEntity.class, itemId, LockModeType.PESSIMISTIC_READ);
+            if (entity == null) {
+                throw new NotFoundEntityException();
+            }
+            entityManager.lock(entity, LockModeType.NONE);
+            if (entity.getAmount() - amount < 0) {
+                return false;
+            }
+            entity.setAmount(entity.getAmount() - amount);
+            entityManager.lock(entity, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
+            entityManager.merge(entity);
+            entityManager.flush();
+            entityManager.lock(entity, LockModeType.NONE);
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            transaction.rollback();
             return false;
+        } finally {
+            if (transaction.isActive()) {
+                transaction.rollback();
+            }
+            entityManager.close();
         }
-        entity.setAmount(entity.getAmount() - amount);
-        entityManager.lock(entity, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
-        entityManager.merge(entity);
-        entityManager.lock(entity, LockModeType.NONE);
-        return true;
     }
 
     @Override

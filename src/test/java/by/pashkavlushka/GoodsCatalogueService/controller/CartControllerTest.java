@@ -63,8 +63,8 @@ public class CartControllerTest {
     
     @Test
     public void addToCart_manyRequests_Success() throws Exception{
-        AddToCartRequest request = new AddToCartRequest(1L, 1L, "Процессор", 4000, 10, false);
-        ExecutorService service = Executors.newFixedThreadPool(10);
+        AddToCartRequest request = new AddToCartRequest(1L, 1L, "Процессор", 4000, 1, false);
+        ExecutorService service = Executors.newFixedThreadPool(100);
         CountDownLatch latch = new CountDownLatch(10);
         Runnable task = ()->{
             try {
@@ -77,7 +77,7 @@ public class CartControllerTest {
             }
         };
         
-        for(int i = 0; i < 10; i++) {
+        for(int i = 0; i < 100; i++) {
             service.submit(task);
         }
         service.shutdown();
