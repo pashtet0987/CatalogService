@@ -14,18 +14,32 @@ public class GoodsDTO {
     private String category;
     private Map<String, String> characteristics;
     private int cost;
-
+    private int amount;
+    
     public GoodsDTO() {
     }
 
-    public GoodsDTO(String name, String category, Map<String, String> characteristics, int cost, String sellerId) {
+    public GoodsDTO(String name, String category, Map<String, String> characteristics, int cost, String sellerId, int amount) {
         this.name = name;
         this.category = category;
         this.characteristics = characteristics;
         this.cost = cost;
         this.sellerId = sellerId;
+        this.amount = amount;
+    }
+    
+    
+
+    public int getAmount() {
+        return amount;
     }
 
+    public void setAmount(int amount) {
+        this.amount = amount;
+    }
+
+    
+    
     public String getName() {
         return name;
     }
@@ -65,5 +79,4 @@ public class GoodsDTO {
     public void setSellerId(String sellerId) {
         this.sellerId = sellerId;
     }
-    
 }

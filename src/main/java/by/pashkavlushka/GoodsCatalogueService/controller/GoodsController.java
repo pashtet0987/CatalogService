@@ -33,12 +33,13 @@ public class GoodsController {
     }
     
     @GetMapping("/")
+    //сделать circuit breaker и fallback(дефолтный ответ)
     public List<GoodsDTO> recomendations(){
         return null;//переопределить с сервисом рекомендаций
     }
     
     @GetMapping("/by-seller")
-    public List<GoodsDTO> findBySeller(@RequestParam("sellerId") String sellerId){
+    public List<GoodsDTO> findBySeller(@RequestParam("sellerId") Long sellerId){
         return goodsService.findBySellerId(sellerId);
     }
 }

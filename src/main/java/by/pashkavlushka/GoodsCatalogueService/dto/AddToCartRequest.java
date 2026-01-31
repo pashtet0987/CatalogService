@@ -11,16 +11,18 @@ public class AddToCartRequest {
     private String itemName;
     private int cost;
     private int amount;
-
+    private boolean status;
+    
     public AddToCartRequest() {
     }
 
-    public AddToCartRequest(Long cartId, Long itemId, String itemName, int cost, int amount) {
+    public AddToCartRequest(Long cartId, Long itemId, String itemName, int cost, int amount, boolean status) {
         this.cartId = cartId;
         this.itemId = itemId;
         this.itemName = itemName;
         this.cost = cost;
         this.amount = amount;
+        this.status = status;
     }
 
     public Long getCartId() {
@@ -61,6 +63,14 @@ public class AddToCartRequest {
 
     public void setAmount(int amount) {
         this.amount = amount;
+    }
+
+    public boolean isStatus() {
+        return status;
+    }
+
+    public void setStatus(boolean status) {
+        this.status = status;
     }
     
     
