@@ -5,8 +5,9 @@ import java.util.Map;
 
 
 public class GoodsDTO {
+    private long id;
     private String name;
-    private String sellerId;
+    private long sellerId;
     private String category;
     private Map<String, String> characteristics;
     private int cost;
@@ -15,7 +16,7 @@ public class GoodsDTO {
     public GoodsDTO() {
     }
 
-    public GoodsDTO(String name, String category, Map<String, String> characteristics, int cost, String sellerId, int amount) {
+    public GoodsDTO(String name, String category, Map<String, String> characteristics, int cost, long sellerId, int amount) {
         this.name = name;
         this.category = category;
         this.characteristics = characteristics;
@@ -23,8 +24,24 @@ public class GoodsDTO {
         this.sellerId = sellerId;
         this.amount = amount;
     }
-    
-    
+
+    public GoodsDTO(long id, String name, long sellerId, String category, Map<String, String> characteristics, int cost, int amount) {
+        this.id = id;
+        this.name = name;
+        this.sellerId = sellerId;
+        this.category = category;
+        this.characteristics = characteristics;
+        this.cost = cost;
+        this.amount = amount;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
 
     public int getAmount() {
         return amount;
@@ -33,8 +50,6 @@ public class GoodsDTO {
     public void setAmount(int amount) {
         this.amount = amount;
     }
-
-    
     
     public String getName() {
         return name;
@@ -68,11 +83,11 @@ public class GoodsDTO {
         this.category = category;
     }
 
-    public String getSellerId() {
+    public long getSellerId() {
         return sellerId;
     }
 
-    public void setSellerId(String sellerId) {
+    public void setSellerId(long sellerId) {
         this.sellerId = sellerId;
     }
 }

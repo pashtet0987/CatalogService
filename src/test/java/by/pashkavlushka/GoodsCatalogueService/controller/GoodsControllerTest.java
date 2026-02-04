@@ -9,6 +9,7 @@ import by.pashkavlushka.GoodsCatalogueService.repository.GoodsRepository;
 import by.pashkavlushka.GoodsCatalogueService.service.GoodsService;
 import by.pashkavlushka.GoodsCatalogueService.service.GoodsServiceImpl;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,11 @@ public class GoodsControllerTest {
     
     @Autowired
     private GoodsRepository goodsRepository;
+    
+    @BeforeAll
+    public static void setProfile(){
+        System.setProperty("spring.profiles.active", "test");
+    }
     
     @BeforeEach
     public void insertDataIntoDatabase() {
@@ -52,11 +58,11 @@ public class GoodsControllerTest {
     
     @Test
     public void byCategory() throws Exception{
-        mockMvc.perform(MockMvcRequestBuilders.get("/goods/electronics")).andExpect(MockMvcResultMatchers.status().isOk()).andExpect(MockMvcResultMatchers.jsonPath("$.length()").value(2));
+        mockMvc.perform(MockMvcRequestBuilders.get("/electronics?userId=1")).andExpect(MockMvcResultMatchers.status().isOk()).andExpect(MockMvcResultMatchers.jsonPath("$.length()").value(2));
     }
     
     @Test
     public void bySeller() throws Exception{
-        mockMvc.perform(MockMvcRequestBuilders.get("/goods/by-seller?sellerId=1")).andExpect(MockMvcResultMatchers.status().isOk()).andExpect(MockMvcResultMatchers.jsonPath("$.length()").value(2));
+        mockMvc.perform(MockMvcRequestBuilders.get("/by-seller?sellerId=1")).andExpect(MockMvcResultMatchers.status().isOk()).andExpect(MockMvcResultMatchers.jsonPath("$.length()").value(2));
     }
 }

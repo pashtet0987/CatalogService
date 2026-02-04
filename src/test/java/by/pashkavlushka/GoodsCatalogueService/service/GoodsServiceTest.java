@@ -46,6 +46,10 @@ public class GoodsServiceTest {
     @Autowired
     private GoodsService goodsService;
 
+    @BeforeAll
+    public static void setProfile(){
+        System.setProperty("spring.profiles.active", "test");
+    }
     
     @BeforeEach
     public void insertDataIntoDatabase() {

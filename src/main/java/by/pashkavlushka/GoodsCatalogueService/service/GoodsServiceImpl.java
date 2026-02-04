@@ -23,7 +23,9 @@ import jakarta.persistence.OptimisticLockException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import org.hibernate.Session;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 @Service
@@ -33,12 +35,17 @@ public class GoodsServiceImpl implements GoodsService {
     private final GoodsRepository goodsRepository;
     private final GoodsMapper parser;
     private final EntityManagerFactory entityManagerFactory;
+    private final int defaultPageSize;
 
-    public GoodsServiceImpl(GoodsRepository goodsRepository, GoodsMapper parser, EntityManagerFactory entityManagerFactory) {
-        this.defaultPageable = PageRequest.of(0, 30, Sort.by(List.of(Sort.Order.asc("cost"))));
+    public GoodsServiceImpl(GoodsRepository goodsRepository
+            , GoodsMapper parser
+            , EntityManagerFactory entityManagerFactory
+            , @Value("${goods.page.size:30}") int defaultPageSize) {
+        this.defaultPageable = PageRequest.of(0, defaultPageSize, Sort.by(List.of(Sort.Order.asc("cost"))));
         this.goodsRepository = goodsRepository;
         this.parser = parser;
         this.entityManagerFactory = entityManagerFactory;
+        this.defaultPageSize = defaultPageSize;
     }
 
     @Transactional
@@ -157,6 +164,17 @@ public class GoodsServiceImpl implements GoodsService {
         
         return goodsRepository.findByCategories(categories,defaultPageable)
                 .getContent().stream().map(parser::entityToDTO).toList();
+    }
+
+    //used in fallback method, chooses by 5 random categories
+    @Override
+    public List<GoodsDTO> findForFallback() {
+        List<String> categories = goodsRepository.findCategories();
+        Collections.shuffle(categories);
+        categories = categories.stream().limit(5).toList();
+        List<GoodsEntity> result = goodsRepository.findByCategories(categories);
+        Collections.shuffle(result);
+        return result.stream().limit(defaultPageSize).map(parser::entityToDTO).toList();
     }
 
 }

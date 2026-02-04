@@ -13,4 +13,4 @@ kafka:
       topic: recomendations-topic
 services:
   recomendations:
-    url: localhost:8001
+    url: http://localhost:8001

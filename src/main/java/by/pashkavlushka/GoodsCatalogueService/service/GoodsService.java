@@ -35,4 +35,6 @@ public interface GoodsService {
     AddToCartRequest validateAddToCartRequest(AddToCartRequest request) throws EntityException;
 
     List<GoodsDTO> findByRecomendations(List<RecomendationDTO> recomendations);
+    
+    List<GoodsDTO> findForFallback();
 }

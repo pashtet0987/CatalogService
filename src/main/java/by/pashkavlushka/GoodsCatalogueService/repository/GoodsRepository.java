@@ -13,9 +13,11 @@ import org.springframework.data.repository.query.Param;
 
 
 public interface GoodsRepository extends JpaRepository<GoodsEntity, Long>{
-    //@Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)
+    
     Optional<GoodsEntity> findById(long id);
+    
     Page<GoodsEntity> findByCategory(String category, Pageable pageable);
+    
     Page<GoodsEntity> findBySellerId(long sellerId, Pageable pageable);
     
     @Query("select g.amount from GoodsEntity g where id = :id")
@@ -23,4 +25,10 @@ public interface GoodsRepository extends JpaRepository<GoodsEntity, Long>{
     
     @Query("select g from GoodsEntity g where category in :categories")
     Page<GoodsEntity> findByCategories(@Param("categories") List<String> categories, Pageable pageable);
+    
+    @Query("select distinct g.category from GoodsEntity g")
+    List<String> findCategories();
+    
+    @Query("select g from GoodsEntity g where category in :categories")
+    List<GoodsEntity> findByCategories(@Param("categories") List<String> categories);
 }
