@@ -1,11 +1,8 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Interface.java to edit this template
- */
 package by.pashkavlushka.GoodsCatalogueService.repository;
 
 import by.pashkavlushka.GoodsCatalogueService.entity.GoodsEntity;
 import jakarta.persistence.LockModeType;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,5 +19,8 @@ public interface GoodsRepository extends JpaRepository<GoodsEntity, Long>{
     Page<GoodsEntity> findBySellerId(long sellerId, Pageable pageable);
     
     @Query("select g.amount from GoodsEntity g where id = :id")
-    public int findAmountById(@Param("id") long id);
+    int findAmountById(@Param("id") long id);
+    
+    @Query("select g from GoodsEntity g where category in :categories")
+    Page<GoodsEntity> findByCategories(@Param("categories") List<String> categories, Pageable pageable);
 }

@@ -58,7 +58,7 @@ public class CartControllerTest {
     @Test
     public void addToCart_singleRequest_Success() throws Exception{
         AddToCartRequest request = new AddToCartRequest(1L, 1L, "Процессор", 4000, 10, false);
-        mockMvc.perform(MockMvcRequestBuilders.post("/cart/").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request))).andExpect(MockMvcResultMatchers.jsonPath("$.status").value(true));
+        mockMvc.perform(MockMvcRequestBuilders.post("/cart/add").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request))).andExpect(MockMvcResultMatchers.jsonPath("$.status").value(true));
     }
     
     @Test
@@ -70,7 +70,7 @@ public class CartControllerTest {
             try {
                 latch.countDown();
                 latch.await();
-                mockMvc.perform(MockMvcRequestBuilders.post("/cart/").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request)))
+                mockMvc.perform(MockMvcRequestBuilders.post("/cart/add").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request)))
                         .andExpect(MockMvcResultMatchers.jsonPath("$.status").value(true));
             } catch (Exception ex) {
                 System.getLogger(CartControllerTest.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);

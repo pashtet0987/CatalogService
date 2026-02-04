@@ -1,11 +1,8 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package by.pashkavlushka.GoodsCatalogueService.service;
 
 import by.pashkavlushka.GoodsCatalogueService.dto.AddToCartRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
+import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
 import by.pashkavlushka.GoodsCatalogueService.entity.GoodsEntity;
 import by.pashkavlushka.GoodsCatalogueService.exception.EntityException;
 import by.pashkavlushka.GoodsCatalogueService.exception.NotFoundEntityException;
@@ -36,4 +33,6 @@ public interface GoodsService {
     boolean addToCart(Long itemId, int amount);
     
     AddToCartRequest validateAddToCartRequest(AddToCartRequest request) throws EntityException;
+
+    List<GoodsDTO> findByRecomendations(List<RecomendationDTO> recomendations);
 }

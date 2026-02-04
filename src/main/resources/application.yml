@@ -4,4 +4,13 @@ spring:
   application:
     name: goods_catalogue_service
 server:
-  port: 8001
+  port: 8000
+kafka:
+  configuration:
+    bootstrapServers: localhost:9092
+    recomendations:
+      sampling: 100
+      topic: recomendations-topic
+services:
+  recomendations:
+    url: localhost:8001

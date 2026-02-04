@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package by.pashkavlushka.GoodsCatalogueService.controller;
 
 import by.pashkavlushka.GoodsCatalogueService.dto.AddToCartRequest;
@@ -25,7 +21,7 @@ public class CartController {
 
     }
     
-    @PostMapping("/")
+    @PostMapping("/add")
     public AddToCartRequest cart(@RequestBody AddToCartRequest request) throws EntityException {
         AddToCartRequest validatedRequest = goodsService.validateAddToCartRequest(request);
         if(goodsService.addToCart(validatedRequest.getItemId(), validatedRequest.getAmount())) {

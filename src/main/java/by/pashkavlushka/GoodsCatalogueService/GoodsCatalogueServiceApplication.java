@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.web.client.RestClient;
 
 @SpringBootApplication
 @EnableJpaRepositories
@@ -18,5 +19,10 @@ public class GoodsCatalogueServiceApplication {
     @Bean
     public PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
         return new PropertySourcesPlaceholderConfigurer();
+    }
+    
+    @Bean
+    public RestClient restClient(){
+        return RestClient.builder().build();
     }
 }

@@ -72,7 +72,6 @@ public class GoodsServiceTest {
         Assertions.assertTrue(goodsService.addToCart(1L, 10));
         GoodsDTO dto = goodsService.findById(1L);
         Assertions.assertEquals(dto.getAmount(), 90);
-        System.out.println(dto.getAmount());
     }
 
     @Test

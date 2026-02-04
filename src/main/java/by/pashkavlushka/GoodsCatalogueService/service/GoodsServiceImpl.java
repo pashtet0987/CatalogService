@@ -1,11 +1,8 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package by.pashkavlushka.GoodsCatalogueService.service;
 
 import by.pashkavlushka.GoodsCatalogueService.dto.AddToCartRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
+import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
 import by.pashkavlushka.GoodsCatalogueService.entity.GoodsEntity;
 import by.pashkavlushka.GoodsCatalogueService.exception.EntityException;
 import by.pashkavlushka.GoodsCatalogueService.exception.NotFoundEntityException;
@@ -25,6 +22,7 @@ import jakarta.persistence.LockModeType;
 import jakarta.persistence.OptimisticLockException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import org.hibernate.Session;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
@@ -134,6 +132,7 @@ public class GoodsServiceImpl implements GoodsService {
             return true;
         } catch (Exception e) {
             transaction.rollback();
+            entityManager.close();
             return false;
         } finally {
             if (transaction.isActive()) {
@@ -146,9 +145,18 @@ public class GoodsServiceImpl implements GoodsService {
     @Override
     @Transactional
     public AddToCartRequest validateAddToCartRequest(AddToCartRequest request) throws EntityException {
-        GoodsEntity entity = goodsRepository.findById(request.getItemId()).orElseThrow(() -> new NotFoundEntityException());
+        goodsRepository.findById(request.getItemId()).orElseThrow(() -> new NotFoundEntityException());
         request.setStatus(true);
         return request;
+    }
+
+    @Override
+    @Transactional
+    public List<GoodsDTO> findByRecomendations(List<RecomendationDTO> recomendations) {
+        List<String> categories = recomendations.stream().map(RecomendationDTO::getCategory).toList();
+        
+        return goodsRepository.findByCategories(categories,defaultPageable)
+                .getContent().stream().map(parser::entityToDTO).toList();
     }
 
 }
