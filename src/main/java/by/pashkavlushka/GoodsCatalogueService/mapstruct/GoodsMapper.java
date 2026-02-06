@@ -1,5 +1,6 @@
 package by.pashkavlushka.GoodsCatalogueService.mapstruct;
 
+import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
 import by.pashkavlushka.GoodsCatalogueService.entity.GoodsEntity;
 import org.mapstruct.InjectionStrategy;
@@ -11,4 +12,5 @@ public interface GoodsMapper {
     
     GoodsDTO entityToDTO(GoodsEntity entity);
     GoodsEntity dtoToEntity(GoodsDTO dto);
+    GoodsEntity requestToEntity(AddGoodsRequest request);
 }

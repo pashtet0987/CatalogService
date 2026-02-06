@@ -11,10 +11,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.web.client.RestClient;
 
 @SpringBootApplication
 @EnableJpaRepositories
+@EnableKafka
 public class GoodsCatalogueServiceApplication {
 
     public static void main(String[] args) {
