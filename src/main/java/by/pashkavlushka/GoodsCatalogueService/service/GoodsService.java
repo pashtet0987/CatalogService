@@ -37,4 +37,6 @@ public interface GoodsService {
     List<GoodsDTO> findByRecomendations(List<RecomendationDTO> recomendations);
     
     List<GoodsDTO> findForFallback();
+    
+    void inventorize(GoodsDTO goodsDTO);
 }

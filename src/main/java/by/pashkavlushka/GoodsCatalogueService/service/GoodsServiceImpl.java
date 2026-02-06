@@ -33,17 +33,17 @@ public class GoodsServiceImpl implements GoodsService {
 
     private final Pageable defaultPageable;
     private final GoodsRepository goodsRepository;
-    private final GoodsMapper parser;
+    private final GoodsMapper goodsMapper;
     private final EntityManagerFactory entityManagerFactory;
     private final int defaultPageSize;
 
-    public GoodsServiceImpl(GoodsRepository goodsRepository
-            , GoodsMapper parser
-            , EntityManagerFactory entityManagerFactory
-            , @Value("${goods.page.size:30}") int defaultPageSize) {
+    public GoodsServiceImpl(GoodsRepository goodsRepository,
+             GoodsMapper parser,
+             EntityManagerFactory entityManagerFactory,
+             @Value("${goods.page.size:30}") int defaultPageSize) {
         this.defaultPageable = PageRequest.of(0, defaultPageSize, Sort.by(List.of(Sort.Order.asc("cost"))));
         this.goodsRepository = goodsRepository;
-        this.parser = parser;
+        this.goodsMapper = parser;
         this.entityManagerFactory = entityManagerFactory;
         this.defaultPageSize = defaultPageSize;
     }
@@ -51,7 +51,7 @@ public class GoodsServiceImpl implements GoodsService {
     @Transactional
     public GoodsDTO findById(Long id) throws EntityException {
         GoodsEntity entity = goodsRepository.findById(id).orElseThrow(() -> new NotFoundEntityException("Could not find entity"));
-        return parser.entityToDTO(entity);
+        return goodsMapper.entityToDTO(entity);
     }
 
     @Transactional
@@ -67,17 +67,17 @@ public class GoodsServiceImpl implements GoodsService {
     @Transactional
     public List<GoodsDTO> findByCategory(String category, Pageable pageable) {
         List<GoodsEntity> entities = goodsRepository.findByCategory(category, pageable).getContent();
-        return entities.stream().map((entity) -> parser.entityToDTO(entity)).toList();
+        return entities.stream().map((entity) -> goodsMapper.entityToDTO(entity)).toList();
     }
 
     private List<GoodsDTO> findByCategoryDefault(String category, Pageable pageable) {
         List<GoodsEntity> entities = goodsRepository.findByCategory(category, pageable).getContent();
-        return entities.stream().map((entity) -> parser.entityToDTO(entity)).toList();
+        return entities.stream().map((entity) -> goodsMapper.entityToDTO(entity)).toList();
     }
 
     @Transactional
     public GoodsDTO save(GoodsDTO goodsDTO) {
-        return parser.entityToDTO(goodsRepository.save(parser.dtoToEntity(goodsDTO)));
+        return goodsMapper.entityToDTO(goodsRepository.save(goodsMapper.dtoToEntity(goodsDTO)));
     }
 
     @Transactional
@@ -97,7 +97,7 @@ public class GoodsServiceImpl implements GoodsService {
 
     private List<GoodsDTO> findBySellerIdDefault(long sellerId, Pageable pageable) {
         List<GoodsEntity> entities = goodsRepository.findBySellerId(sellerId, pageable).getContent();
-        return entities.stream().map((entity) -> parser.entityToDTO(entity)).toList();
+        return entities.stream().map((entity) -> goodsMapper.entityToDTO(entity)).toList();
     }
 
     @Override
@@ -119,7 +119,7 @@ public class GoodsServiceImpl implements GoodsService {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         EntityTransaction transaction = entityManager.getTransaction();
         transaction.begin();
-      
+
         try {
             //GoodsEntity entity = entityManager.find(GoodsEntity.class, itemId);
             GoodsEntity entity = entityManager.find(GoodsEntity.class, itemId, LockModeType.PESSIMISTIC_READ);
@@ -161,9 +161,9 @@ public class GoodsServiceImpl implements GoodsService {
     @Transactional
     public List<GoodsDTO> findByRecomendations(List<RecomendationDTO> recomendations) {
         List<String> categories = recomendations.stream().map(RecomendationDTO::getCategory).toList();
-        
-        return goodsRepository.findByCategories(categories,defaultPageable)
-                .getContent().stream().map(parser::entityToDTO).toList();
+
+        return goodsRepository.findByCategories(categories, defaultPageable)
+                .getContent().stream().map(goodsMapper::entityToDTO).toList();
     }
 
     //used in fallback method, chooses by 5 random categories
@@ -174,7 +174,39 @@ public class GoodsServiceImpl implements GoodsService {
         categories = categories.stream().limit(5).toList();
         List<GoodsEntity> result = goodsRepository.findByCategories(categories);
         Collections.shuffle(result);
-        return result.stream().limit(defaultPageSize).map(parser::entityToDTO).toList();
+        return result.stream().limit(defaultPageSize).map(goodsMapper::entityToDTO).toList();
     }
 
+    //нужно обновлять данные цены в корзинах или не хранить цену в корзине
+    @Override
+    public void inventorize(GoodsDTO goodsDTO) {
+        while (true) {
+            try {
+                inventorizeInner(goodsDTO);
+            } catch (ObjectOptimisticLockingFailureException | OptimisticLockException e) {
+                System.out.println(e.getMessage());
+                //no need to do anything so that the algorithm works again
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+        
+    }
+    
+    private void inventorizeInner(GoodsDTO goodsDTO) {
+        EntityManager session = entityManagerFactory.createEntityManager();
+        EntityTransaction transaction = session.getTransaction();
+        transaction.begin();
+        GoodsEntity entity = session.find(GoodsEntity.class, goodsDTO.getId());
+        if (entity != null && entity.getSellerId() == goodsDTO.getSellerId()) {
+            //добавляем количество к текущему
+            session.lock(entity, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
+            entity.setAmount(entity.getAmount() + goodsDTO.getAmount());
+            entity.setCharacteristics(goodsDTO.getCharacteristics());
+            entity.setCost(goodsDTO.getCost());
+            
+            session.lock(entity, LockModeType.NONE);
+            transaction.commit();
+        }
+    }
 }

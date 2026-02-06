@@ -14,7 +14,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
-public class KafkaService {
+public class KafkaRecomendationServiceImpl implements KafkaRecomendationService {
 
     private KafkaTemplate<Long, RecomendationDTO> kafkaTemplate;
     private Random rndm;
@@ -22,7 +22,7 @@ public class KafkaService {
     private String topic;
 
     @Autowired
-    public KafkaService(KafkaTemplate<Long, RecomendationDTO> kafkaTemplate,
+    public KafkaRecomendationServiceImpl(KafkaTemplate<Long, RecomendationDTO> kafkaTemplate,
             @Value("${kafka.configuration.recomendations.sampling}") int sampling,
             @Value("${kafka.configuration.recomendations.topic}") String topic) {
         this.kafkaTemplate = kafkaTemplate;

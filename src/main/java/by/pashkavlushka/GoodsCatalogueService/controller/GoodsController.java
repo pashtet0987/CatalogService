@@ -2,8 +2,9 @@ package by.pashkavlushka.GoodsCatalogueService.controller;
 
 import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
+import by.pashkavlushka.GoodsCatalogueService.exception.EntityException;
 import by.pashkavlushka.GoodsCatalogueService.exception.RecomendationServiceUnavailableException;
-import by.pashkavlushka.GoodsCatalogueService.kafka.KafkaService;
+import by.pashkavlushka.GoodsCatalogueService.kafka.KafkaRecomendationServiceImpl;
 import by.pashkavlushka.GoodsCatalogueService.service.GoodsService;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -31,14 +32,14 @@ public class GoodsController {
 
     private GoodsService goodsService;
     private RestClient restClient;
-    private KafkaService kafkaService;
+    private KafkaRecomendationServiceImpl kafkaService;
     private String recomendationsServiceUrl;
     private final CircuitBreaker circuitBreaker;
 
     @Autowired
     public GoodsController(GoodsService goodsService,
             RestClient restClient,
-            KafkaService kafkaService,
+            KafkaRecomendationServiceImpl kafkaService,
             CircuitBreaker circuitBreaker,
             @Value("${services.recomendations.url}") String recomendationsServiceUrl) {
         this.goodsService = goodsService;
@@ -68,7 +69,6 @@ public class GoodsController {
                         .getBody();
                 return goodsService.findByRecomendations(recomendations);
             } catch (Exception e) {
-                System.out.println("exception occured");
                 throw new RecomendationServiceUnavailableException();
             }
         })
@@ -83,4 +83,10 @@ public class GoodsController {
     public List<GoodsDTO> findBySeller(@RequestParam("sellerId") Long sellerId) {
         return goodsService.findBySellerId(sellerId);
     }
+    
+    @GetMapping("/goods")
+    public GoodsDTO loadProductById(@RequestParam("itemId") long itemId) throws EntityException {
+        return goodsService.findById(itemId);
+    }
+    
 }
