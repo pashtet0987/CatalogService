@@ -12,22 +12,20 @@ public class UpdateGoodsRequest {
     private int newPrice;
     private int toAddAmount;
     private Map<String, String> characteristics;
-    private boolean status;
 
     public UpdateGoodsRequest() {
     }
     
-    public UpdateGoodsRequest(long itemId, long sellerId, int oldPrice, int newPrice, int toAddAmount, Map<String, String> characteristics, boolean status) {
+    public UpdateGoodsRequest(long itemId, long sellerId, int oldPrice, int newPrice, int toAddAmount, Map<String, String> characteristics) {
         this.itemId = itemId;
         this.sellerId = sellerId;
         this.oldPrice = oldPrice;
         this.newPrice = newPrice;
         this.toAddAmount = toAddAmount;
         this.characteristics = characteristics;
-        this.status = status;
     }
 
-    public UpdateGoodsRequest(String id, long itemId, long sellerId, int oldPrice, int newPrice, int toAddAmount, Map<String, String> characteristics, boolean status) {
+    public UpdateGoodsRequest(String id, long itemId, long sellerId, int oldPrice, int newPrice, int toAddAmount, Map<String, String> characteristics) {
         this.id = id;
         this.itemId = itemId;
         this.sellerId = sellerId;
@@ -35,7 +33,6 @@ public class UpdateGoodsRequest {
         this.newPrice = newPrice;
         this.toAddAmount = toAddAmount;
         this.characteristics = characteristics;
-        this.status = status;
     }
 
     
@@ -95,14 +92,6 @@ public class UpdateGoodsRequest {
         this.id = id;
     }
 
-    public boolean isStatus() {
-        return status;
-    }
-
-    public void setStatus(boolean status) {
-        this.status = status;
-    }
-
     @Override
     public int hashCode() {
         int hash = 7;
@@ -113,7 +102,6 @@ public class UpdateGoodsRequest {
         hash = 97 * hash + this.newPrice;
         hash = 97 * hash + this.toAddAmount;
         hash = 97 * hash + Objects.hashCode(this.characteristics);
-        hash = 97 * hash + (this.status ? 1 : 0);
         return hash;
     }
 
@@ -142,9 +130,6 @@ public class UpdateGoodsRequest {
             return false;
         }
         if (this.toAddAmount != other.toAddAmount) {
-            return false;
-        }
-        if (this.status != other.status) {
             return false;
         }
         if (!Objects.equals(this.id, other.id)) {

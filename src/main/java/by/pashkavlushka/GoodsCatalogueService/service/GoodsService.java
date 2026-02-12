@@ -1,9 +1,11 @@
 package by.pashkavlushka.GoodsCatalogueService.service;
 
+import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddToCartRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
+import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.entity.GoodsEntity;
 import by.pashkavlushka.GoodsCatalogueService.exception.EntityException;
@@ -41,7 +43,7 @@ public interface GoodsService {
     
     List<GoodsDTO> findForFallback();
     
-    void updateInventory(UpdateGoodsRequest request, Acknowledgment ack);
+    UpdateGoodsFeedback updateInventory(UpdateGoodsRequest request, Acknowledgment ack);
     
-    void addToInventory(AddGoodsRequest dto, Acknowledgment ack);
+    AddGoodsFeedback addToInventory(AddGoodsRequest dto, Acknowledgment ack);
 }

@@ -1,10 +1,10 @@
 package by.pashkavlushka.GoodsCatalogueService.kafka;
 
+import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsRequest;
-import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
+import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsRequest;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -33,8 +33,7 @@ import org.springframework.kafka.support.serializer.JacksonJsonSerializer;
 @Configuration
 public class KafkaConfiguration {
     
-    @Bean
-    public DefaultKafkaProducerFactory<Long, RecomendationDTO> kafkaProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
+    public static Map<String, Object> producerProperties(String bootstrapServers){
         Map<String, Object> properties = new HashMap();
         properties.put(ProducerConfig.ACKS_CONFIG, "all");
         properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
@@ -43,12 +42,39 @@ public class KafkaConfiguration {
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         properties.put(ProducerConfig.RETRIES_CONFIG, "3");
         properties.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, "10000");
-        DefaultKafkaProducerFactory<Long, RecomendationDTO> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(properties);
+        return properties;
+    }
+    
+    @Bean
+    public DefaultKafkaProducerFactory<Long, RecomendationDTO> kafkaProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
+        DefaultKafkaProducerFactory<Long, RecomendationDTO> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers));
         return kafkaProducerFactory;
     }
 
     @Bean
     public KafkaTemplate<Long, RecomendationDTO> kafkaTemplate(DefaultKafkaProducerFactory<Long, RecomendationDTO> producerFactory) {
+        return new KafkaTemplate<>(producerFactory);
+    }
+    
+    @Bean
+    public DefaultKafkaProducerFactory<String, AddGoodsFeedback> kafkaAddFeedbackProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
+        DefaultKafkaProducerFactory<String, AddGoodsFeedback> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers));
+        return kafkaProducerFactory;
+    }
+
+    @Bean
+    public KafkaTemplate<String, AddGoodsFeedback> kafkaAddFeedbackTemplate(DefaultKafkaProducerFactory<String, AddGoodsFeedback> producerFactory) {
+        return new KafkaTemplate<>(producerFactory);
+    }
+    
+    @Bean
+    public DefaultKafkaProducerFactory<String, UpdateGoodsFeedback> kafkaUpdateFeedbackProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
+        DefaultKafkaProducerFactory<String, UpdateGoodsFeedback> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers));
+        return kafkaProducerFactory;
+    }
+
+    @Bean
+    public KafkaTemplate<String, UpdateGoodsFeedback> kafkaUpdateFeedbackTemplate(DefaultKafkaProducerFactory<String, UpdateGoodsFeedback> producerFactory) {
         return new KafkaTemplate<>(producerFactory);
     }
     
@@ -116,7 +142,7 @@ public class KafkaConfiguration {
 
     @Bean
     public NewTopic inventoryTopic() {
-        return new NewTopic("inventory-topic", 3, (short) 1);
+        return new NewTopic("add-inventory-topic", 3, (short) 1);
     }
     
     @Bean

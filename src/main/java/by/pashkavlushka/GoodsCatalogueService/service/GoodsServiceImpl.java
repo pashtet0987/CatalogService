@@ -1,9 +1,11 @@
 package by.pashkavlushka.GoodsCatalogueService.service;
 
+import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddToCartRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
+import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.entity.GoodsEntity;
 import by.pashkavlushka.GoodsCatalogueService.exception.EntityException;
@@ -181,36 +183,46 @@ public class GoodsServiceImpl implements GoodsService {
     }
 
     @Override
-    public void addToInventory(AddGoodsRequest dto, Acknowledgment acknowledgment) {
-        goodsRepository.save(goodsMapper.requestToEntity(dto));
-        acknowledgment.acknowledge();
+    public AddGoodsFeedback addToInventory(AddGoodsRequest dto, Acknowledgment acknowledgment) {
+        if (goodsRepository.save(goodsMapper.requestToEntity(dto)).getId() > 0) {
+            acknowledgment.acknowledge();
+            return new AddGoodsFeedback(dto.getId(), true);
+        }
+        return new AddGoodsFeedback(dto.getId(), false);
     }
 
     //нужно обновлять данные цены в корзинах или не хранить цену в корзине
     @Override
-    public void updateInventory(UpdateGoodsRequest goodsDTO, Acknowledgment ack) {
+    public UpdateGoodsFeedback updateInventory(UpdateGoodsRequest goodsDTO, Acknowledgment ack) {
         boolean updated = false;
         while (!updated) {
             try {
                 updated = updateInventoryInner(goodsDTO);
                 ack.acknowledge();
+                return new UpdateGoodsFeedback(goodsDTO.getId(), updated, false);
             } catch (ObjectOptimisticLockingFailureException | OptimisticLockException e) {
                 System.out.println(e.getMessage());
                 //no need to do anything so that the algorithm works again
+            } catch (NotFoundEntityException e) {
+                return new UpdateGoodsFeedback(goodsDTO.getId(), false, false);
             } catch (Exception e) {
                 System.out.println(e.getMessage());
+                return new UpdateGoodsFeedback(goodsDTO.getId(), false, true);
             }
         }
-
+        return new UpdateGoodsFeedback(goodsDTO.getId(), false, false);
     }
 
-    private boolean updateInventoryInner(UpdateGoodsRequest goodsDTO) {
+    private boolean updateInventoryInner(UpdateGoodsRequest goodsDTO) throws NotFoundEntityException {
         EntityManager session = entityManagerFactory.createEntityManager();
         EntityTransaction transaction = session.getTransaction();
         transaction.begin();
         try {
             GoodsEntity entity = session.find(GoodsEntity.class, goodsDTO.getItemId());
-            if (entity != null && entity.getSellerId() == goodsDTO.getSellerId()) {
+            if (entity == null) {
+                throw new NotFoundEntityException();
+            }
+            if (entity.getSellerId() == goodsDTO.getSellerId()) {
                 //добавляем количество к текущему
                 session.lock(entity, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
                 entity.setAmount(entity.getAmount() + goodsDTO.getToAddAmount());
@@ -218,11 +230,14 @@ public class GoodsServiceImpl implements GoodsService {
                 entity.setCost(goodsDTO.getNewPrice());
                 session.merge(entity);
                 session.lock(entity, LockModeType.NONE);
-
+                transaction.commit();
             }
             return true;
+        } catch (ObjectOptimisticLockingFailureException | OptimisticLockException e) {
+            transaction.rollback();
+            throw e;
         } finally {
-            transaction.commit();
+            session.close();
         }
     }
 }
