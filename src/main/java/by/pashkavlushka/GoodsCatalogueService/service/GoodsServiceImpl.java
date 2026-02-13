@@ -126,7 +126,6 @@ public class GoodsServiceImpl implements GoodsService {
         transaction.begin();
 
         try {
-            //GoodsEntity entity = entityManager.find(GoodsEntity.class, itemId);
             GoodsEntity entity = entityManager.find(GoodsEntity.class, itemId, LockModeType.PESSIMISTIC_READ);
             if (entity == null) {
                 throw new NotFoundEntityException();
@@ -186,9 +185,9 @@ public class GoodsServiceImpl implements GoodsService {
     public AddGoodsFeedback addToInventory(AddGoodsRequest dto, Acknowledgment acknowledgment) {
         if (goodsRepository.save(goodsMapper.requestToEntity(dto)).getId() > 0) {
             acknowledgment.acknowledge();
-            return new AddGoodsFeedback(dto.getId(), true);
+            return new AddGoodsFeedback(dto.getId(), true, false);
         }
-        return new AddGoodsFeedback(dto.getId(), false);
+        return new AddGoodsFeedback(dto.getId(), false, true);
     }
 
     //нужно обновлять данные цены в корзинах или не хранить цену в корзине

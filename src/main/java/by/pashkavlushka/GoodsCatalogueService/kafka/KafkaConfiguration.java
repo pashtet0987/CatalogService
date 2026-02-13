@@ -13,6 +13,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.LongSerializer;
+import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -33,7 +35,7 @@ import org.springframework.kafka.support.serializer.JacksonJsonSerializer;
 @Configuration
 public class KafkaConfiguration {
     
-    public static Map<String, Object> producerProperties(String bootstrapServers){
+    public static Map<String, Object> producerProperties(String bootstrapServers, Class<? extends Serializer> serializer){
         Map<String, Object> properties = new HashMap();
         properties.put(ProducerConfig.ACKS_CONFIG, "all");
         properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
@@ -47,7 +49,7 @@ public class KafkaConfiguration {
     
     @Bean
     public DefaultKafkaProducerFactory<Long, RecomendationDTO> kafkaProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
-        DefaultKafkaProducerFactory<Long, RecomendationDTO> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers));
+        DefaultKafkaProducerFactory<Long, RecomendationDTO> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers, LongSerializer.class));
         return kafkaProducerFactory;
     }
 
@@ -57,24 +59,24 @@ public class KafkaConfiguration {
     }
     
     @Bean
-    public DefaultKafkaProducerFactory<String, AddGoodsFeedback> kafkaAddFeedbackProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
-        DefaultKafkaProducerFactory<String, AddGoodsFeedback> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers));
+    public DefaultKafkaProducerFactory<Long, AddGoodsFeedback> kafkaAddFeedbackProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
+        DefaultKafkaProducerFactory<Long, AddGoodsFeedback> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers, LongSerializer.class));
         return kafkaProducerFactory;
     }
 
     @Bean
-    public KafkaTemplate<String, AddGoodsFeedback> kafkaAddFeedbackTemplate(DefaultKafkaProducerFactory<String, AddGoodsFeedback> producerFactory) {
+    public KafkaTemplate<Long, AddGoodsFeedback> kafkaAddFeedbackTemplate(DefaultKafkaProducerFactory<Long, AddGoodsFeedback> producerFactory) {
         return new KafkaTemplate<>(producerFactory);
     }
     
     @Bean
-    public DefaultKafkaProducerFactory<String, UpdateGoodsFeedback> kafkaUpdateFeedbackProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
-        DefaultKafkaProducerFactory<String, UpdateGoodsFeedback> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers));
+    public DefaultKafkaProducerFactory<Long, UpdateGoodsFeedback> kafkaUpdateFeedbackProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
+        DefaultKafkaProducerFactory<Long, UpdateGoodsFeedback> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers, LongSerializer.class));
         return kafkaProducerFactory;
     }
 
     @Bean
-    public KafkaTemplate<String, UpdateGoodsFeedback> kafkaUpdateFeedbackTemplate(DefaultKafkaProducerFactory<String, UpdateGoodsFeedback> producerFactory) {
+    public KafkaTemplate<Long, UpdateGoodsFeedback> kafkaUpdateFeedbackTemplate(DefaultKafkaProducerFactory<Long, UpdateGoodsFeedback> producerFactory) {
         return new KafkaTemplate<>(producerFactory);
     }
     
