@@ -3,6 +3,8 @@ package by.pashkavlushka.GoodsCatalogueService.service;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddToCartRequest;
+import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsFeedback;
+import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
@@ -46,4 +48,6 @@ public interface GoodsService {
     UpdateGoodsFeedback updateInventory(UpdateGoodsRequest request, Acknowledgment ack);
     
     AddGoodsFeedback addToInventory(AddGoodsRequest dto, Acknowledgment ack);
+    
+    DeleteGoodsFeedback deleteFromInventory(DeleteGoodsRequest dto, Acknowledgment ack);
 }

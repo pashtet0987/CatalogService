@@ -1,10 +1,13 @@
 package by.pashkavlushka.GoodsCatalogueService.kafka;
 
 import by.pashkavlushka.GoodsCatalogueService.async.AddFeedbackRunnable;
-import by.pashkavlushka.GoodsCatalogueService.async.AddUpdateFallbackRequestExecutor;
+import by.pashkavlushka.GoodsCatalogueService.async.DeleteFeedbackRunnable;
+import by.pashkavlushka.GoodsCatalogueService.async.FeedbackRequestExecutor;
 import by.pashkavlushka.GoodsCatalogueService.async.UpdateFeedbackRunnable;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsRequest;
+import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsFeedback;
+import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsRequest;
@@ -27,6 +30,7 @@ public class InventoryListener {
     private GoodsService goodsService;
     private KafkaTemplate<Long, AddGoodsFeedback> addGoodsFallbackTemplate;
     private KafkaTemplate<Long, UpdateGoodsFeedback> updateGoodsFallbackTemplate;
+    private KafkaTemplate<Long, DeleteGoodsFeedback> deleteGoodsFallbackTemplate;
     private HandledAddEventRepository addRepository;
     private HandledUpdateEventRepository updateRepository;
 
@@ -34,6 +38,7 @@ public class InventoryListener {
     public InventoryListener(GoodsService inventoryService,
             KafkaTemplate<Long, AddGoodsFeedback> addGoodsFallbackTemplate,
             KafkaTemplate<Long, UpdateGoodsFeedback> updateGoodsFallbackTemplate,
+            KafkaTemplate<Long, DeleteGoodsFeedback> deleteGoodsFallbackTemplate,
             HandledAddEventRepository addRepository,
             HandledUpdateEventRepository updateRepository) {
         this.goodsService = inventoryService;
@@ -41,6 +46,7 @@ public class InventoryListener {
         this.updateGoodsFallbackTemplate = updateGoodsFallbackTemplate;
         this.addRepository = addRepository;
         this.updateRepository = updateRepository;
+        this.deleteGoodsFallbackTemplate = deleteGoodsFallbackTemplate;
     }
 
     @KafkaListener(topics = {"add-inventory-topic"}, groupId = "inventory", containerFactory = "kafkaListenerContainerFactory", autoStartup = "true")
@@ -53,7 +59,7 @@ public class InventoryListener {
                 addRepository.save(new HandledAddEventEntity(request.getId()));
             }
         }
-        AddUpdateFallbackRequestExecutor.submitAddTaskFallback(new AddFeedbackRunnable(feedback, addGoodsFallbackTemplate, request));
+        FeedbackRequestExecutor.submitAddTaskFeedback(new AddFeedbackRunnable(feedback, addGoodsFallbackTemplate, request));
 
     }
 
@@ -61,12 +67,18 @@ public class InventoryListener {
     public void updateGoodsListener(UpdateGoodsRequest request, Acknowledgment ack) {
         //default is bad
         UpdateGoodsFeedback feedback = new UpdateGoodsFeedback(request.getId(), false, false);
-        if (updateRepository.existsById(request.getId())) {
+        if (!updateRepository.existsById(request.getId())) {
             feedback = goodsService.updateInventory(request, ack);
             if (feedback.isStatus()) {
                 updateRepository.save(new HandledUpdateEventEntity(request.getId()));
             }
         }
-        AddUpdateFallbackRequestExecutor.submitUpdateTaskFallback(new UpdateFeedbackRunnable(feedback, updateGoodsFallbackTemplate, request));
+        FeedbackRequestExecutor.submitUpdateTaskFeedback(new UpdateFeedbackRunnable(feedback, updateGoodsFallbackTemplate, request));
+    }
+    
+    @KafkaListener(topics = {"delete-inventory-topic"}, groupId = "delete-inventory", containerFactory = "kafkaDeleteListenerContainerFactory", autoStartup = "true")
+    public void deleteGoodsListener(DeleteGoodsRequest request, Acknowledgment ack) {
+        DeleteGoodsFeedback feedback = goodsService.deleteFromInventory(request, ack);
+        FeedbackRequestExecutor.submitDeleteTaskFeedback(new DeleteFeedbackRunnable(feedback, deleteGoodsFallbackTemplate, request));
     }
 }

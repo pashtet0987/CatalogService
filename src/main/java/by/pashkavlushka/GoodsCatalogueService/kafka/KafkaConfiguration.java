@@ -1,7 +1,9 @@
 package by.pashkavlushka.GoodsCatalogueService.kafka;
 
+import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsRequest;
+import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsRequest;
@@ -80,6 +82,18 @@ public class KafkaConfiguration {
         return new KafkaTemplate<>(producerFactory);
     }
     
+    @Bean
+    public DefaultKafkaProducerFactory<Long, DeleteGoodsFeedback> kafkaDeleteFeedbackProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
+        DefaultKafkaProducerFactory<Long, DeleteGoodsFeedback> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers, LongSerializer.class));
+        return kafkaProducerFactory;
+    }
+
+    @Bean
+    public KafkaTemplate<Long, DeleteGoodsFeedback> kafkaDeleteFeedbackTemplate(DefaultKafkaProducerFactory<Long, DeleteGoodsFeedback> producerFactory) {
+        return new KafkaTemplate<>(producerFactory);
+    }
+    //-----------------------------------------consumer------------------------------------
+    
     public static Map<String, Object> consumerProperties(String kafkaBrokers, String groupId, Class<?> valueClass) {
         Map<String, Object> properties = new HashMap();
         properties.put(ConsumerConfig.ALLOW_AUTO_CREATE_TOPICS_CONFIG, "false");
@@ -106,6 +120,12 @@ public class KafkaConfiguration {
     @Bean
     public ConsumerFactory<Long, UpdateGoodsRequest> kafkaUpdateConsumerFactory(@Value("${kafka.configuration.bootstrapServers}") String kafkaBrokers) {
         DefaultKafkaConsumerFactory<Long, UpdateGoodsRequest> factory = new DefaultKafkaConsumerFactory<>(consumerProperties(kafkaBrokers, "update-inventory", UpdateGoodsRequest.class));
+        return factory;
+    }
+    
+    @Bean
+    public ConsumerFactory<Long, DeleteGoodsRequest> kafkaDeleteConsumerFactory(@Value("${kafka.configuration.bootstrapServers}") String kafkaBrokers) {
+        DefaultKafkaConsumerFactory<Long, DeleteGoodsRequest> factory = new DefaultKafkaConsumerFactory<>(consumerProperties(kafkaBrokers, "update-inventory", DeleteGoodsRequest.class));
         return factory;
     }
 
@@ -141,14 +161,29 @@ public class KafkaConfiguration {
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         return factory;
     }
-
+    
+    @Bean
+    @DependsOn({"kafkaDeleteConsumerFactory", "errorHandler"})
+    public ConcurrentKafkaListenerContainerFactory<Long, DeleteGoodsRequest> kafkaDeleteListenerContainerFactory(@Qualifier("kafkaDeleteConsumerFactory") ConsumerFactory<Long, DeleteGoodsRequest> consumerFactory, DefaultErrorHandler handler) {
+        ConcurrentKafkaListenerContainerFactory<Long, DeleteGoodsRequest> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory);
+        factory.setCommonErrorHandler(handler);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+        return factory;
+    }
+    
     @Bean
     public NewTopic inventoryTopic() {
         return new NewTopic("add-inventory-topic", 3, (short) 1);
-    }
+}
     
     @Bean
     public NewTopic updateInventoryTopic() {
         return new NewTopic("update-inventory-topic", 3, (short) 1);
+    }
+    
+    @Bean
+    public NewTopic deleteInventoryTopic() {
+        return new NewTopic("delete-inventory-topic", 3, (short) 1);
     }
 }

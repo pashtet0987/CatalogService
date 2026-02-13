@@ -3,6 +3,8 @@ package by.pashkavlushka.GoodsCatalogueService.service;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddToCartRequest;
+import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsFeedback;
+import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
@@ -182,6 +184,7 @@ public class GoodsServiceImpl implements GoodsService {
     }
 
     @Override
+    @Transactional
     public AddGoodsFeedback addToInventory(AddGoodsRequest dto, Acknowledgment acknowledgment) {
         if (goodsRepository.save(goodsMapper.requestToEntity(dto)).getId() > 0) {
             acknowledgment.acknowledge();
@@ -238,5 +241,18 @@ public class GoodsServiceImpl implements GoodsService {
         } finally {
             session.close();
         }
+    }
+
+    @Override
+    @Transactional
+    public DeleteGoodsFeedback deleteFromInventory(DeleteGoodsRequest dto, Acknowledgment ack) {
+        GoodsEntity entity = goodsRepository.findById(dto.getItemId()).orElse(null);
+        if(entity != null && entity.getSellerId()== dto.getSellerId()) {
+            goodsRepository.delete(entity);
+            ack.acknowledge();
+            return new DeleteGoodsFeedback(dto.getId(), true, false);
+        }
+        ack.acknowledge();
+        return new DeleteGoodsFeedback(dto.getId(), false, false);
     }
 }
