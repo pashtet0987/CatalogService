@@ -1,10 +1,12 @@
 package by.pashkavlushka.GoodsCatalogueService.kafka;
 
+import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsRequest;
+import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsRequest;
-import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
+import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
+import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsRequest;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -13,6 +15,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.LongSerializer;
+import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -33,8 +37,7 @@ import org.springframework.kafka.support.serializer.JacksonJsonSerializer;
 @Configuration
 public class KafkaConfiguration {
     
-    @Bean
-    public DefaultKafkaProducerFactory<Long, RecomendationDTO> kafkaProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
+    public static Map<String, Object> producerProperties(String bootstrapServers, Class<? extends Serializer> serializer){
         Map<String, Object> properties = new HashMap();
         properties.put(ProducerConfig.ACKS_CONFIG, "all");
         properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
@@ -43,7 +46,12 @@ public class KafkaConfiguration {
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         properties.put(ProducerConfig.RETRIES_CONFIG, "3");
         properties.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, "10000");
-        DefaultKafkaProducerFactory<Long, RecomendationDTO> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(properties);
+        return properties;
+    }
+    
+    @Bean
+    public DefaultKafkaProducerFactory<Long, RecomendationDTO> kafkaProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
+        DefaultKafkaProducerFactory<Long, RecomendationDTO> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers, LongSerializer.class));
         return kafkaProducerFactory;
     }
 
@@ -51,6 +59,51 @@ public class KafkaConfiguration {
     public KafkaTemplate<Long, RecomendationDTO> kafkaTemplate(DefaultKafkaProducerFactory<Long, RecomendationDTO> producerFactory) {
         return new KafkaTemplate<>(producerFactory);
     }
+    
+    @Bean
+    public DefaultKafkaProducerFactory<Long, AddGoodsFeedback> kafkaAddFeedbackProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
+        DefaultKafkaProducerFactory<Long, AddGoodsFeedback> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers, LongSerializer.class));
+        return kafkaProducerFactory;
+    }
+
+    @Bean
+    public KafkaTemplate<Long, AddGoodsFeedback> kafkaAddFeedbackTemplate(DefaultKafkaProducerFactory<Long, AddGoodsFeedback> producerFactory) {
+        return new KafkaTemplate<>(producerFactory);
+    }
+    
+    @Bean
+    public DefaultKafkaProducerFactory<Long, UpdateGoodsFeedback> kafkaUpdateFeedbackProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
+        DefaultKafkaProducerFactory<Long, UpdateGoodsFeedback> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers, LongSerializer.class));
+        return kafkaProducerFactory;
+    }
+
+    @Bean
+    public KafkaTemplate<Long, UpdateGoodsFeedback> kafkaUpdateFeedbackTemplate(DefaultKafkaProducerFactory<Long, UpdateGoodsFeedback> producerFactory) {
+        return new KafkaTemplate<>(producerFactory);
+    }
+    
+    @Bean
+    public DefaultKafkaProducerFactory<Long, DeleteGoodsFeedback> kafkaDeleteFeedbackProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
+        DefaultKafkaProducerFactory<Long, DeleteGoodsFeedback> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers, LongSerializer.class));
+        return kafkaProducerFactory;
+    }
+
+    @Bean
+    public KafkaTemplate<Long, DeleteGoodsFeedback> kafkaDeleteFeedbackTemplate(DefaultKafkaProducerFactory<Long, DeleteGoodsFeedback> producerFactory) {
+        return new KafkaTemplate<>(producerFactory);
+    }
+    
+    @Bean
+    public DefaultKafkaProducerFactory<Long, UpdateGoodsRequest> kafkaUpdateRequestProducerFactory(@Value("${kafka.configuration.bootstrapServers}") String bootstrapServers) {
+        DefaultKafkaProducerFactory<Long, UpdateGoodsRequest> kafkaProducerFactory = new DefaultKafkaProducerFactory<>(producerProperties(bootstrapServers, LongSerializer.class));
+        return kafkaProducerFactory;
+    }
+
+    @Bean
+    public KafkaTemplate<Long, UpdateGoodsRequest> kafkaUpdateRequestTemplate(DefaultKafkaProducerFactory<Long, UpdateGoodsRequest> producerFactory) {
+        return new KafkaTemplate<>(producerFactory);
+    }
+    //-----------------------------------------consumer------------------------------------
     
     public static Map<String, Object> consumerProperties(String kafkaBrokers, String groupId, Class<?> valueClass) {
         Map<String, Object> properties = new HashMap();
@@ -80,7 +133,19 @@ public class KafkaConfiguration {
         DefaultKafkaConsumerFactory<Long, UpdateGoodsRequest> factory = new DefaultKafkaConsumerFactory<>(consumerProperties(kafkaBrokers, "update-inventory", UpdateGoodsRequest.class));
         return factory;
     }
+    
+    @Bean
+    public ConsumerFactory<Long, DeleteGoodsRequest> kafkaDeleteConsumerFactory(@Value("${kafka.configuration.bootstrapServers}") String kafkaBrokers) {
+        DefaultKafkaConsumerFactory<Long, DeleteGoodsRequest> factory = new DefaultKafkaConsumerFactory<>(consumerProperties(kafkaBrokers, "update-inventory", DeleteGoodsRequest.class));
+        return factory;
+    }
 
+    @Bean
+    public ConsumerFactory<Long, UpdateGoodsFeedback> kafkaUpdateCartFeedbackConsumerFactory(@Value("${kafka.configuration.bootstrapServers}") String kafkaBrokers) {
+        DefaultKafkaConsumerFactory<Long, UpdateGoodsFeedback> factory = new DefaultKafkaConsumerFactory<>(consumerProperties(kafkaBrokers, "update-cart-inventory", UpdateGoodsFeedback.class));
+        return factory;
+    }
+    
     @Bean
     public DefaultErrorHandler errorHandler() {
         ConsumerRecordRecoverer emptyRecoverer = new ConsumerRecordRecoverer() {
@@ -113,14 +178,44 @@ public class KafkaConfiguration {
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         return factory;
     }
-
+    
+    @Bean
+    @DependsOn({"kafkaDeleteConsumerFactory", "errorHandler"})
+    public ConcurrentKafkaListenerContainerFactory<Long, DeleteGoodsRequest> kafkaDeleteListenerContainerFactory(@Qualifier("kafkaDeleteConsumerFactory") ConsumerFactory<Long, DeleteGoodsRequest> consumerFactory, DefaultErrorHandler handler) {
+        ConcurrentKafkaListenerContainerFactory<Long, DeleteGoodsRequest> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory);
+        factory.setCommonErrorHandler(handler);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+        return factory;
+    }
+    
+    @Bean
+    @DependsOn({"kafkaUpdateCartFeedbackConsumerFactory", "errorHandler"})
+    public ConcurrentKafkaListenerContainerFactory<Long, UpdateGoodsFeedback> kafkaUpdateCartFeedbackListenerContainerFactory(@Qualifier("kafkaUpdateCartFeedbackConsumerFactory") ConsumerFactory<Long, UpdateGoodsFeedback> consumerFactory, DefaultErrorHandler handler) {
+        ConcurrentKafkaListenerContainerFactory<Long, UpdateGoodsFeedback> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory);
+        factory.setCommonErrorHandler(handler);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+        return factory;
+    }
+    
     @Bean
     public NewTopic inventoryTopic() {
-        return new NewTopic("inventory-topic", 3, (short) 1);
-    }
+        return new NewTopic("add-inventory-topic", 3, (short) 1);
+}
     
     @Bean
     public NewTopic updateInventoryTopic() {
         return new NewTopic("update-inventory-topic", 3, (short) 1);
+    }
+    
+    @Bean
+    public NewTopic deleteInventoryTopic() {
+        return new NewTopic("delete-inventory-topic", 3, (short) 1);
+    }
+    
+    @Bean
+    public NewTopic updateCartInventoryFeedbackTopic() {
+        return new NewTopic("inventory-update-cart-feedback-topic", 3, (short) 1);
     }
 }

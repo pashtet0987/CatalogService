@@ -1,13 +1,18 @@
 package by.pashkavlushka.GoodsCatalogueService.service;
 
+import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddToCartRequest;
+import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsFeedback;
+import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
+import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.entity.GoodsEntity;
 import by.pashkavlushka.GoodsCatalogueService.exception.EntityException;
 import by.pashkavlushka.GoodsCatalogueService.exception.NotFoundEntityException;
+import by.pashkavlushka.GoodsCatalogueService.repository.ToHandleUpdateEventRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
@@ -41,7 +46,11 @@ public interface GoodsService {
     
     List<GoodsDTO> findForFallback();
     
-    void updateInventory(UpdateGoodsRequest request, Acknowledgment ack);
+    UpdateGoodsFeedback updateInventory(UpdateGoodsRequest request, Acknowledgment ack);
     
-    void addToInventory(AddGoodsRequest dto, Acknowledgment ack);
+    AddGoodsFeedback addToInventory(AddGoodsRequest dto, Acknowledgment ack);
+    
+    DeleteGoodsFeedback deleteFromInventory(DeleteGoodsRequest dto, Acknowledgment ack);
+
+    void rollbackUpdateInventory(String id, ToHandleUpdateEventRepository repository, Acknowledgment ack);
 }

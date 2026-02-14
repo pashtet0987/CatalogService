@@ -1,6 +1,9 @@
 package by.pashkavlushka.GoodsCatalogueService;
 
 import by.pashkavlushka.GoodsCatalogueService.entity.GoodsEntity;
+import by.pashkavlushka.GoodsCatalogueService.entity.HandledAddEventEntity;
+import by.pashkavlushka.GoodsCatalogueService.entity.HandledUpdateEventEntity;
+import by.pashkavlushka.GoodsCatalogueService.entity.ToHandleUpdateEventEntity;
 import jakarta.persistence.SharedCacheMode;
 import jakarta.persistence.ValidationMode;
 import jakarta.persistence.spi.ClassTransformer;
@@ -68,7 +71,7 @@ public abstract class GoodsPersistenceUnitInfo implements PersistenceUnitInfo {
 
     @Override
     public List<String> getManagedClassNames() {
-        return List.of(GoodsEntity.class.getName());
+        return List.of(GoodsEntity.class.getName(), HandledAddEventEntity.class.getName(), HandledUpdateEventEntity.class.getName(), ToHandleUpdateEventEntity.class.getName());
     }
 
     @Override

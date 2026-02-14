@@ -1,41 +1,52 @@
-package by.pashkavlushka.GoodsCatalogueService.dto;
+package by.pashkavlushka.GoodsCatalogueService.entity;
 
-import java.util.Map;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import java.util.Objects;
 
-
-public class UpdateGoodsRequest {
+@Entity
+@Table(name = "to_handle_update", schema = "online_shop")
+public class ToHandleUpdateEventEntity {
+    @Id
     private String id;
-    private long itemId;
-    private long sellerId;
-    private int oldPrice;
-    private int newPrice;
-    private int toAddAmount;
-    private Map<String, String> characteristics;
-
-    public UpdateGoodsRequest() {
-    }
     
-    public UpdateGoodsRequest(long itemId, long sellerId, int oldPrice, int newPrice, int toAddAmount, Map<String, String> characteristics) {
-        this.itemId = itemId;
-        this.sellerId = sellerId;
-        this.oldPrice = oldPrice;
-        this.newPrice = newPrice;
-        this.toAddAmount = toAddAmount;
-        this.characteristics = characteristics;
+    @Column(name = "item_id")
+    private long itemId;
+    
+    @Column(name = "seller_id")
+    private long sellerId;
+    
+    @Column(name = "old_price")
+    private int oldPrice;
+    
+    @Column(name = "new_price")
+    private int newPrice;
+    
+    @Column(name = "to_add_amount")
+    private int toAddAmount;
+
+    public ToHandleUpdateEventEntity() {
     }
 
-    public UpdateGoodsRequest(String id, long itemId, long sellerId, int oldPrice, int newPrice, int toAddAmount, Map<String, String> characteristics) {
+    public ToHandleUpdateEventEntity(String id, long itemId, long sellerId, int oldPrice, int newPrice, int toAddAmount) {
         this.id = id;
         this.itemId = itemId;
         this.sellerId = sellerId;
         this.oldPrice = oldPrice;
         this.newPrice = newPrice;
         this.toAddAmount = toAddAmount;
-        this.characteristics = characteristics;
     }
 
-    
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public long getItemId() {
         return itemId;
     }
@@ -76,32 +87,15 @@ public class UpdateGoodsRequest {
         this.toAddAmount = toAddAmount;
     }
 
-    public Map<String, String> getCharacteristics() {
-        return characteristics;
-    }
-
-    public void setCharacteristics(Map<String, String> characteristics) {
-        this.characteristics = characteristics;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
     @Override
     public int hashCode() {
         int hash = 7;
-        hash = 97 * hash + Objects.hashCode(this.id);
-        hash = 97 * hash + (int) (this.itemId ^ (this.itemId >>> 32));
-        hash = 97 * hash + (int) (this.sellerId ^ (this.sellerId >>> 32));
-        hash = 97 * hash + this.oldPrice;
-        hash = 97 * hash + this.newPrice;
-        hash = 97 * hash + this.toAddAmount;
-        hash = 97 * hash + Objects.hashCode(this.characteristics);
+        hash = 53 * hash + Objects.hashCode(this.id);
+        hash = 53 * hash + (int) (this.itemId ^ (this.itemId >>> 32));
+        hash = 53 * hash + (int) (this.sellerId ^ (this.sellerId >>> 32));
+        hash = 53 * hash + this.oldPrice;
+        hash = 53 * hash + this.newPrice;
+        hash = 53 * hash + this.toAddAmount;
         return hash;
     }
 
@@ -116,7 +110,7 @@ public class UpdateGoodsRequest {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        final UpdateGoodsRequest other = (UpdateGoodsRequest) obj;
+        final ToHandleUpdateEventEntity other = (ToHandleUpdateEventEntity) obj;
         if (this.itemId != other.itemId) {
             return false;
         }
@@ -132,10 +126,7 @@ public class UpdateGoodsRequest {
         if (this.toAddAmount != other.toAddAmount) {
             return false;
         }
-        if (!Objects.equals(this.id, other.id)) {
-            return false;
-        }
-        return Objects.equals(this.characteristics, other.characteristics);
+        return Objects.equals(this.id, other.id);
     }
     
     
