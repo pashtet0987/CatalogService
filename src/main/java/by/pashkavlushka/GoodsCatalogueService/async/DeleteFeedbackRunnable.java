@@ -8,19 +8,19 @@ public class DeleteFeedbackRunnable implements Runnable{
 
     private DeleteGoodsFeedback feedback;
     private KafkaTemplate<Long, DeleteGoodsFeedback> deleteGoodsFallbackTemplate;
-    private DeleteGoodsRequest request;
+    private long sellerId;
 
     public DeleteFeedbackRunnable() {
     }
 
-    public DeleteFeedbackRunnable(DeleteGoodsFeedback feedback, KafkaTemplate<Long, DeleteGoodsFeedback> deleteGoodsFallbackTemplate, DeleteGoodsRequest request) {
+    public DeleteFeedbackRunnable(DeleteGoodsFeedback feedback, KafkaTemplate<Long, DeleteGoodsFeedback> deleteGoodsFallbackTemplate, long sellerId) {
         this.feedback = feedback;
         this.deleteGoodsFallbackTemplate = deleteGoodsFallbackTemplate;
-        this.request = request;
+        this.sellerId = sellerId;
     }
     
     @Override
     public void run() {
-        deleteGoodsFallbackTemplate.send("inventory-delete-feedback-topic", request.getSellerId(), feedback);
+        deleteGoodsFallbackTemplate.send("inventory-delete-feedback-topic", sellerId, feedback);
     }
 }

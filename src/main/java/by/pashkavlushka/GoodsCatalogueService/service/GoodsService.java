@@ -12,6 +12,7 @@ import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.entity.GoodsEntity;
 import by.pashkavlushka.GoodsCatalogueService.exception.EntityException;
 import by.pashkavlushka.GoodsCatalogueService.exception.NotFoundEntityException;
+import by.pashkavlushka.GoodsCatalogueService.repository.ToHandleUpdateEventRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
@@ -50,4 +51,6 @@ public interface GoodsService {
     AddGoodsFeedback addToInventory(AddGoodsRequest dto, Acknowledgment ack);
     
     DeleteGoodsFeedback deleteFromInventory(DeleteGoodsRequest dto, Acknowledgment ack);
+
+    void rollbackUpdateInventory(String id, ToHandleUpdateEventRepository repository, Acknowledgment ack);
 }

@@ -9,17 +9,17 @@ public class AddFeedbackRunnable implements Runnable {
     
     private AddGoodsFeedback feedback;
     private KafkaTemplate<Long, AddGoodsFeedback> addGoodsFallbackTemplate;
-    private AddGoodsRequest request;
+    private long sellerId;
 
-    public AddFeedbackRunnable(AddGoodsFeedback feedback, KafkaTemplate<Long, AddGoodsFeedback> addGoodsFallbackTemplate, AddGoodsRequest request) {
+    public AddFeedbackRunnable(AddGoodsFeedback feedback, KafkaTemplate<Long, AddGoodsFeedback> addGoodsFallbackTemplate, long sellerId) {
         this.feedback = feedback;
         this.addGoodsFallbackTemplate = addGoodsFallbackTemplate;
-        this.request = request;
+        this.sellerId = sellerId;
     }
 
     @Override
     public void run() {
-        addGoodsFallbackTemplate.send("inventory-add-feedback-topic", request.getSellerId(), feedback);
+        addGoodsFallbackTemplate.send("inventory-add-feedback-topic", sellerId, feedback);
     }
     
 }

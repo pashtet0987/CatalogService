@@ -9,17 +9,17 @@ public class UpdateFeedbackRunnable implements Runnable {
     
     private UpdateGoodsFeedback feedback;
     private KafkaTemplate<Long, UpdateGoodsFeedback> updateGoodsFallbackTemplate;
-    private UpdateGoodsRequest request;
+    private long sellerId;
     
-    public UpdateFeedbackRunnable(UpdateGoodsFeedback feedback, KafkaTemplate<Long, UpdateGoodsFeedback> updateGoodsFallbackTemplate, UpdateGoodsRequest request) {
+    public UpdateFeedbackRunnable(UpdateGoodsFeedback feedback, KafkaTemplate<Long, UpdateGoodsFeedback> updateGoodsFallbackTemplate, long sellerId) {
         this.feedback = feedback;
         this.updateGoodsFallbackTemplate = updateGoodsFallbackTemplate;
-        this.request = request;
+        this.sellerId = sellerId;
     }
 
     @Override
     public void run() {
-        updateGoodsFallbackTemplate.send("inventory-update-feedback-topic", request.getSellerId(), feedback);
+        updateGoodsFallbackTemplate.send("inventory-update-feedback-topic", sellerId, feedback);
     }
     
 }

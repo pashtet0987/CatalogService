@@ -13,8 +13,10 @@ import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.entity.HandledAddEventEntity;
 import by.pashkavlushka.GoodsCatalogueService.entity.HandledUpdateEventEntity;
+import by.pashkavlushka.GoodsCatalogueService.entity.ToHandleUpdateEventEntity;
 import by.pashkavlushka.GoodsCatalogueService.repository.HandledAddEventRepository;
 import by.pashkavlushka.GoodsCatalogueService.repository.HandledUpdateEventRepository;
+import by.pashkavlushka.GoodsCatalogueService.repository.ToHandleUpdateEventRepository;
 import by.pashkavlushka.GoodsCatalogueService.service.GoodsService;
 import jakarta.persistence.EntityManagerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,22 +33,28 @@ public class InventoryListener {
     private KafkaTemplate<Long, AddGoodsFeedback> addGoodsFallbackTemplate;
     private KafkaTemplate<Long, UpdateGoodsFeedback> updateGoodsFallbackTemplate;
     private KafkaTemplate<Long, DeleteGoodsFeedback> deleteGoodsFallbackTemplate;
+    private KafkaTemplate<Long, UpdateGoodsRequest> updateGoodsRequestTemplate;
     private HandledAddEventRepository addRepository;
     private HandledUpdateEventRepository updateRepository;
+    private ToHandleUpdateEventRepository toUpdateRepository;
 
     @Autowired
     public InventoryListener(GoodsService inventoryService,
             KafkaTemplate<Long, AddGoodsFeedback> addGoodsFallbackTemplate,
             KafkaTemplate<Long, UpdateGoodsFeedback> updateGoodsFallbackTemplate,
             KafkaTemplate<Long, DeleteGoodsFeedback> deleteGoodsFallbackTemplate,
+            KafkaTemplate<Long, UpdateGoodsRequest> updateGoodsRequestTemplate,
             HandledAddEventRepository addRepository,
-            HandledUpdateEventRepository updateRepository) {
+            HandledUpdateEventRepository updateRepository,
+            ToHandleUpdateEventRepository toUpdateRepository) {
         this.goodsService = inventoryService;
         this.addGoodsFallbackTemplate = addGoodsFallbackTemplate;
         this.updateGoodsFallbackTemplate = updateGoodsFallbackTemplate;
         this.addRepository = addRepository;
         this.updateRepository = updateRepository;
         this.deleteGoodsFallbackTemplate = deleteGoodsFallbackTemplate;
+        this.updateGoodsRequestTemplate = updateGoodsRequestTemplate;
+        this.toUpdateRepository = toUpdateRepository;
     }
 
     @KafkaListener(topics = {"add-inventory-topic"}, groupId = "inventory", containerFactory = "kafkaListenerContainerFactory", autoStartup = "true")
@@ -59,7 +67,7 @@ public class InventoryListener {
                 addRepository.save(new HandledAddEventEntity(request.getId()));
             }
         }
-        FeedbackRequestExecutor.submitAddTaskFeedback(new AddFeedbackRunnable(feedback, addGoodsFallbackTemplate, request));
+        FeedbackRequestExecutor.submitAddTaskFeedback(new AddFeedbackRunnable(feedback, addGoodsFallbackTemplate, request.getSellerId()));
 
     }
 
@@ -70,15 +78,31 @@ public class InventoryListener {
         if (!updateRepository.existsById(request.getId())) {
             feedback = goodsService.updateInventory(request, ack);
             if (feedback.isStatus()) {
+                //proceed to cart service
                 updateRepository.save(new HandledUpdateEventEntity(request.getId()));
+                toUpdateRepository.save(new ToHandleUpdateEventEntity(request.getId(), request.getItemId(), request.getSellerId(), request.getOldPrice(), request.getNewPrice(), request.getToAddAmount()));
+                updateGoodsRequestTemplate.send("update-cart-inventory-topic", request.getSellerId(), request);
+                return;
             }
         }
-        FeedbackRequestExecutor.submitUpdateTaskFeedback(new UpdateFeedbackRunnable(feedback, updateGoodsFallbackTemplate, request));
+        //else send bac feedback
+        FeedbackRequestExecutor.submitUpdateTaskFeedback(new UpdateFeedbackRunnable(feedback, updateGoodsFallbackTemplate, request.getSellerId()));
     }
     
     @KafkaListener(topics = {"delete-inventory-topic"}, groupId = "delete-inventory", containerFactory = "kafkaDeleteListenerContainerFactory", autoStartup = "true")
     public void deleteGoodsListener(DeleteGoodsRequest request, Acknowledgment ack) {
         DeleteGoodsFeedback feedback = goodsService.deleteFromInventory(request, ack);
-        FeedbackRequestExecutor.submitDeleteTaskFeedback(new DeleteFeedbackRunnable(feedback, deleteGoodsFallbackTemplate, request));
+        FeedbackRequestExecutor.submitDeleteTaskFeedback(new DeleteFeedbackRunnable(feedback, deleteGoodsFallbackTemplate, request.getSellerId()));
+    }
+    
+    @KafkaListener(topics = {"inventory-update-cart-feedback-topic"}, groupId = "update-cart-inventory", containerFactory = "kafkaUpdateCartFeedbackListenerContainerFactory", autoStartup = "true")
+    public void updateGoodsCartFeedbackListener(UpdateGoodsFeedback feedback, Acknowledgment ack) {
+        long sellerId = toUpdateRepository.findSellerIdById(feedback.getId());
+        if(!feedback.isStatus()) {
+            goodsService.rollbackUpdateInventory(feedback.getId(), toUpdateRepository, ack);
+            updateRepository.deleteById(feedback.getId());
+        }
+        toUpdateRepository.deleteById(feedback.getId());
+        FeedbackRequestExecutor.submitUpdateTaskFeedback(new UpdateFeedbackRunnable(feedback, updateGoodsFallbackTemplate, sellerId));
     }
 }

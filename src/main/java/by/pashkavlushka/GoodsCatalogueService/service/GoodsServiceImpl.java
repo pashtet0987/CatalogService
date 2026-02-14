@@ -10,6 +10,7 @@ import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.entity.GoodsEntity;
+import by.pashkavlushka.GoodsCatalogueService.entity.ToHandleUpdateEventEntity;
 import by.pashkavlushka.GoodsCatalogueService.exception.EntityException;
 import by.pashkavlushka.GoodsCatalogueService.exception.NotFoundEntityException;
 import by.pashkavlushka.GoodsCatalogueService.repository.GoodsRepository;
@@ -21,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import by.pashkavlushka.GoodsCatalogueService.mapstruct.GoodsMapper;
+import by.pashkavlushka.GoodsCatalogueService.repository.ToHandleUpdateEventRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.EntityTransaction;
@@ -158,7 +160,9 @@ public class GoodsServiceImpl implements GoodsService {
     @Override
     @Transactional
     public AddToCartRequest validateAddToCartRequest(AddToCartRequest request) throws EntityException {
-        goodsRepository.findById(request.getItemId()).orElseThrow(() -> new NotFoundEntityException());
+        GoodsEntity entity = goodsRepository.findById(request.getItemId()).orElseThrow(() -> new NotFoundEntityException());
+        request.setCost(entity.getCost());
+        request.setItemName(entity.getName());
         request.setStatus(true);
         return request;
     }
@@ -254,5 +258,21 @@ public class GoodsServiceImpl implements GoodsService {
         }
         ack.acknowledge();
         return new DeleteGoodsFeedback(dto.getId(), false, false);
+    }
+
+    @Override
+    @Transactional
+    public void rollbackUpdateInventory(String id, ToHandleUpdateEventRepository repository, Acknowledgment ack) {
+        //it persists 101%
+        ToHandleUpdateEventEntity entity = repository.findById(id).get();
+        UpdateGoodsRequest request = new UpdateGoodsRequest(entity.getId()
+                , entity.getItemId()
+                , entity.getSellerId()
+                //oldPrice and newPrice switched their locations so we rollback with oldPrice
+                , entity.getNewPrice()
+                , entity.getOldPrice()
+                , -1 * entity.getToAddAmount()
+                , goodsRepository.findById(entity.getItemId()).get().getCharacteristics());
+        this.updateInventory(request, ack);
     }
 }
