@@ -23,9 +23,10 @@ public class CartController {
     
     @PostMapping("/add")
     public AddToCartRequest cart(@RequestBody AddToCartRequest request) throws EntityException {
-        AddToCartRequest validatedRequest = goodsService.validateAddToCartRequest(request);
-        if(goodsService.addToCart(validatedRequest.getItemId(), validatedRequest.getAmount())) {
-            request.setStatus(true);
+        request.setStatus(false);
+        request = goodsService.validateAddToCartRequest(request);
+        if(request.isStatus()) {
+            goodsService.addToCart(request.getItemId(), request.getAmount());
         }
         return request;
     }

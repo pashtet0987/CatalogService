@@ -10,7 +10,7 @@ import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.entity.GoodsEntity;
-import by.pashkavlushka.GoodsCatalogueService.entity.ToHandleUpdateEventEntity;
+import by.pashkavlushka.GoodsCatalogueService.entity.GoodsToRollbackUpdateEntity;
 import by.pashkavlushka.GoodsCatalogueService.exception.EntityException;
 import by.pashkavlushka.GoodsCatalogueService.exception.NotFoundEntityException;
 import by.pashkavlushka.GoodsCatalogueService.repository.GoodsRepository;
@@ -22,7 +22,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import by.pashkavlushka.GoodsCatalogueService.mapstruct.GoodsMapper;
-import by.pashkavlushka.GoodsCatalogueService.repository.ToHandleUpdateEventRepository;
+import by.pashkavlushka.GoodsCatalogueService.mapstruct.GoodsRollbackMapper;
+import by.pashkavlushka.GoodsCatalogueService.mapstruct.UpdateRequestMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.EntityTransaction;
@@ -36,6 +37,7 @@ import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import by.pashkavlushka.GoodsCatalogueService.repository.RollbackUpdateEventRepository;
 
 @Service
 public class GoodsServiceImpl implements GoodsService {
@@ -45,16 +47,25 @@ public class GoodsServiceImpl implements GoodsService {
     private final GoodsMapper goodsMapper;
     private final EntityManagerFactory entityManagerFactory;
     private final int defaultPageSize;
+    private final UpdateRequestMapper updateRequestMapper;
+    private final GoodsRollbackMapper goodsRollbackMapper;
+    private final RollbackUpdateEventRepository rollbackUpdateRepository;
 
     public GoodsServiceImpl(GoodsRepository goodsRepository,
             GoodsMapper parser,
             EntityManagerFactory entityManagerFactory,
-            @Value("${goods.page.size:30}") int defaultPageSize) {
+            @Value("${goods.page.size:30}") int defaultPageSize,
+            UpdateRequestMapper updateRequestMapper,
+            RollbackUpdateEventRepository rollbackUpdateRepository,
+            GoodsRollbackMapper goodsRollbackMapper) {
         this.defaultPageable = PageRequest.of(0, defaultPageSize, Sort.by(List.of(Sort.Order.asc("cost"))));
         this.goodsRepository = goodsRepository;
         this.goodsMapper = parser;
         this.entityManagerFactory = entityManagerFactory;
         this.defaultPageSize = defaultPageSize;
+        this.updateRequestMapper = updateRequestMapper;
+        this.rollbackUpdateRepository = rollbackUpdateRepository;
+        this.goodsRollbackMapper = goodsRollbackMapper;
     }
 
     @Transactional
@@ -163,7 +174,10 @@ public class GoodsServiceImpl implements GoodsService {
         GoodsEntity entity = goodsRepository.findById(request.getItemId()).orElseThrow(() -> new NotFoundEntityException());
         request.setCost(entity.getCost());
         request.setItemName(entity.getName());
-        request.setStatus(true);
+        if (rollbackUpdateRepository.findInFlightUpdatesByItemId(request.getItemId()) == 0) {
+            request.setStatus(true);
+        }
+
         return request;
     }
 
@@ -199,46 +213,53 @@ public class GoodsServiceImpl implements GoodsService {
 
     //нужно обновлять данные цены в корзинах или не хранить цену в корзине
     @Override
-    public UpdateGoodsFeedback updateInventory(UpdateGoodsRequest goodsDTO, Acknowledgment ack) {
-        boolean updated = false;
-        while (!updated) {
+    public UpdateGoodsFeedback updateInventory(UpdateGoodsRequest updateRequest, Acknowledgment ack) {
+        while (true) {
             try {
-                updated = updateInventoryInner(goodsDTO);
+                GoodsToRollbackUpdateEntity rollbackUpdateEntity = updateInventoryInner(updateRequest);
+                rollbackUpdateEntity.setId(updateRequest.getId());
+                rollbackUpdateRepository.save(rollbackUpdateEntity);
                 ack.acknowledge();
-                return new UpdateGoodsFeedback(goodsDTO.getId(), updated, false);
+                return new UpdateGoodsFeedback(updateRequest.getId(), true, false);
             } catch (ObjectOptimisticLockingFailureException | OptimisticLockException e) {
                 System.out.println(e.getMessage());
                 //no need to do anything so that the algorithm works again
             } catch (NotFoundEntityException e) {
-                return new UpdateGoodsFeedback(goodsDTO.getId(), false, false);
+                return new UpdateGoodsFeedback(updateRequest.getId(), false, false);
             } catch (Exception e) {
                 System.out.println(e.getMessage());
-                return new UpdateGoodsFeedback(goodsDTO.getId(), false, true);
+                return new UpdateGoodsFeedback(updateRequest.getId(), false, true);
             }
         }
-        return new UpdateGoodsFeedback(goodsDTO.getId(), false, false);
     }
 
-    private boolean updateInventoryInner(UpdateGoodsRequest goodsDTO) throws NotFoundEntityException {
+    private GoodsToRollbackUpdateEntity updateInventoryInner(UpdateGoodsRequest updateRequest) throws NotFoundEntityException {
         EntityManager session = entityManagerFactory.createEntityManager();
         EntityTransaction transaction = session.getTransaction();
         transaction.begin();
         try {
-            GoodsEntity entity = session.find(GoodsEntity.class, goodsDTO.getItemId());
+            GoodsEntity entity = session.find(GoodsEntity.class, updateRequest.getItemId());
             if (entity == null) {
                 throw new NotFoundEntityException();
             }
-            if (entity.getSellerId() == goodsDTO.getSellerId()) {
+            if (entity.getSellerId() == updateRequest.getSellerId()) {
+                //сохраняем старую версию
+                //amount кладется в toAddAmount
+                GoodsToRollbackUpdateEntity rollbackUpdateEntity = goodsRollbackMapper.entityToRollbackEntity(entity);
+                
                 //добавляем количество к текущему
                 session.lock(entity, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
-                entity.setAmount(entity.getAmount() + goodsDTO.getToAddAmount());
-                entity.setCharacteristics(goodsDTO.getCharacteristics());
-                entity.setCost(goodsDTO.getNewPrice());
+                entity.setAmount(entity.getAmount() + updateRequest.getToAddAmount());
+                entity.setCost(updateRequest.getCost());
+                entity.setCategory(updateRequest.getCategory());
+                entity.setCharacteristics(updateRequest.getCharacteristics());
+                entity.setName(updateRequest.getName());
                 session.merge(entity);
                 session.lock(entity, LockModeType.NONE);
                 transaction.commit();
+                return rollbackUpdateEntity;
             }
-            return true;
+            throw new NotFoundEntityException();
         } catch (ObjectOptimisticLockingFailureException | OptimisticLockException e) {
             transaction.rollback();
             throw e;
@@ -251,7 +272,7 @@ public class GoodsServiceImpl implements GoodsService {
     @Transactional
     public DeleteGoodsFeedback deleteFromInventory(DeleteGoodsRequest dto, Acknowledgment ack) {
         GoodsEntity entity = goodsRepository.findById(dto.getItemId()).orElse(null);
-        if(entity != null && entity.getSellerId()== dto.getSellerId()) {
+        if (entity != null && entity.getSellerId() == dto.getSellerId()) {
             goodsRepository.delete(entity);
             ack.acknowledge();
             return new DeleteGoodsFeedback(dto.getId(), true, false);
@@ -262,17 +283,60 @@ public class GoodsServiceImpl implements GoodsService {
 
     @Override
     @Transactional
-    public void rollbackUpdateInventory(String id, ToHandleUpdateEventRepository repository, Acknowledgment ack) {
+    public void rollbackUpdateInventory(String id, Acknowledgment ack) {
         //it persists 101%
-        ToHandleUpdateEventEntity entity = repository.findById(id).get();
-        UpdateGoodsRequest request = new UpdateGoodsRequest(entity.getId()
-                , entity.getItemId()
-                , entity.getSellerId()
-                //oldPrice and newPrice switched their locations so we rollback with oldPrice
-                , entity.getNewPrice()
-                , entity.getOldPrice()
-                , -1 * entity.getToAddAmount()
-                , goodsRepository.findById(entity.getItemId()).get().getCharacteristics());
-        this.updateInventory(request, ack);
+        GoodsToRollbackUpdateEntity entity = rollbackUpdateRepository.findById(id).get();
+        UpdateGoodsRequest request = updateRequestMapper.entityToDTO(entity);
+        boolean updated = false;
+        while (!updated) {
+            try {
+                updated = rollbackInventoryInner(request);
+                ack.acknowledge();
+
+            } catch (ObjectOptimisticLockingFailureException | OptimisticLockException e) {
+                System.out.println(e.getMessage());
+                //no need to do anything so that the algorithm works again
+            } catch (NotFoundEntityException e) {
+                return;
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+                return;
+            }
+        }
+
+    }
+
+    private boolean rollbackInventoryInner(UpdateGoodsRequest updateRequest) throws NotFoundEntityException {
+        EntityManager session = entityManagerFactory.createEntityManager();
+        EntityTransaction transaction = session.getTransaction();
+        transaction.begin();
+        try {
+            GoodsEntity entity = session.find(GoodsEntity.class, updateRequest.getItemId());
+            if (entity == null) {
+                throw new NotFoundEntityException();
+            }
+            if (entity.getSellerId() == updateRequest.getSellerId()) {
+                //сохраняем старую версию
+                //amount кладется в toAddAmount
+                GoodsToRollbackUpdateEntity rollbackUpdateEntity = goodsRollbackMapper.entityToRollbackEntity(entity);
+                rollbackUpdateRepository.save(rollbackUpdateEntity);
+                //добавляем количество к текущему
+                session.lock(entity, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
+                entity.setAmount(entity.getAmount() + updateRequest.getToAddAmount());
+                entity.setCost(updateRequest.getCost());
+                entity.setCategory(updateRequest.getCategory());
+                entity.setCharacteristics(updateRequest.getCharacteristics());
+                entity.setName(updateRequest.getName());
+                session.merge(entity);
+                session.lock(entity, LockModeType.NONE);
+                transaction.commit();
+            }
+            return true;
+        } catch (ObjectOptimisticLockingFailureException | OptimisticLockException e) {
+            transaction.rollback();
+            throw e;
+        } finally {
+            session.close();
+        }
     }
 }

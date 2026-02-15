@@ -12,13 +12,13 @@ import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.entity.GoodsEntity;
 import by.pashkavlushka.GoodsCatalogueService.exception.EntityException;
 import by.pashkavlushka.GoodsCatalogueService.exception.NotFoundEntityException;
-import by.pashkavlushka.GoodsCatalogueService.repository.ToHandleUpdateEventRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import by.pashkavlushka.GoodsCatalogueService.repository.RollbackUpdateEventRepository;
 
 public interface GoodsService {
 
@@ -52,5 +52,5 @@ public interface GoodsService {
     
     DeleteGoodsFeedback deleteFromInventory(DeleteGoodsRequest dto, Acknowledgment ack);
 
-    void rollbackUpdateInventory(String id, ToHandleUpdateEventRepository repository, Acknowledgment ack);
+    void rollbackUpdateInventory(String id, Acknowledgment ack);
 }
