@@ -1,5 +1,6 @@
 package by.pashkavlushka.GoodsCatalogueService;
 
+import by.pashkavlushka.GoodsCatalogueService.entity.DeleteGoodsRequestEntity;
 import by.pashkavlushka.GoodsCatalogueService.entity.GoodsEntity;
 import by.pashkavlushka.GoodsCatalogueService.entity.HandledAddEventEntity;
 import by.pashkavlushka.GoodsCatalogueService.entity.HandledUpdateEventEntity;
@@ -71,7 +72,7 @@ public abstract class GoodsPersistenceUnitInfo implements PersistenceUnitInfo {
 
     @Override
     public List<String> getManagedClassNames() {
-        return List.of(GoodsEntity.class.getName(), HandledAddEventEntity.class.getName(), HandledUpdateEventEntity.class.getName(), GoodsToRollbackUpdateEntity.class.getName());
+        return List.of(GoodsEntity.class.getName(), HandledAddEventEntity.class.getName(), HandledUpdateEventEntity.class.getName(), GoodsToRollbackUpdateEntity.class.getName(), DeleteGoodsRequestEntity.class.getName());
     }
 
     @Override
