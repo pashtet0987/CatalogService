@@ -3,8 +3,11 @@ package by.pashkavlushka.GoodsCatalogueService.service;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddToCartRequest;
+import by.pashkavlushka.GoodsCatalogueService.dto.CriteriaGoodsRequest;
+import by.pashkavlushka.GoodsCatalogueService.dto.CriteriaGoodsResponse;
 import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsRequest;
+import by.pashkavlushka.GoodsCatalogueService.dto.Direction;
 import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
@@ -34,17 +37,21 @@ public interface GoodsService {
     
     List<GoodsDTO> findBySellerId(long sellerId, int pageNum);
     
-    List<GoodsDTO> findBySellerId(long sellerId, Pageable pageable);
+    List<GoodsDTO> findBySellerId(long sellerId, int pageNum, Direction direction, String orderBy);
+    
+    List<String> findCategories();
 
     GoodsDTO save(GoodsDTO goodsDTO);
     
     boolean addToCart(Long itemId, int amount);
     
-    AddToCartRequest validateAddToCartRequest(AddToCartRequest request) throws EntityException;
+    boolean validateAddToCartRequest(AddToCartRequest request) throws EntityException;
 
     List<GoodsDTO> findByRecomendations(List<RecomendationDTO> recomendations);
     
-    List<GoodsDTO> findForFallback();
+    List<GoodsDTO> findByRecomendations(List<RecomendationDTO> recomendations, int page);
+    
+    List<GoodsDTO> findForFallback(int page);
     
     UpdateGoodsFeedback updateInventory(UpdateGoodsRequest request, Acknowledgment ack);
     
@@ -53,4 +60,8 @@ public interface GoodsService {
     DeleteGoodsFeedback deleteFromInventory(DeleteGoodsRequest dto, Acknowledgment ack);
 
     void rollbackUpdateInventory(String id, Acknowledgment ack);
+
+    public CriteriaGoodsResponse fulfillCriteriaRequest(CriteriaGoodsRequest goodsRequest);
+    
+    public boolean hasNextPage(List<GoodsDTO> list);
 }
