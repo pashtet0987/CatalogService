@@ -1,20 +1,26 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package by.pashkavlushka.GoodsCatalogueService.dto;
 
 
 public class AddToCartRequest {
     private Long cartId;
     private Long itemId;
+    private Long sellerId;
     private String itemName;
     private int cost;
     private int amount;
     private boolean status;
-    
+
     public AddToCartRequest() {
     }
 
-    public AddToCartRequest(Long cartId, Long itemId, String itemName, int cost, int amount, boolean status) {
+    public AddToCartRequest(Long cartId, Long itemId, Long sellerId, String itemName, int cost, int amount, boolean status) {
         this.cartId = cartId;
         this.itemId = itemId;
+        this.sellerId = sellerId;
         this.itemName = itemName;
         this.cost = cost;
         this.amount = amount;
@@ -68,6 +74,12 @@ public class AddToCartRequest {
     public void setStatus(boolean status) {
         this.status = status;
     }
-    
-    
+
+    public Long getSellerId() {
+        return sellerId;
+    }
+
+    public void setSellerId(Long sellerId) {
+        this.sellerId = sellerId;
+    }
 }

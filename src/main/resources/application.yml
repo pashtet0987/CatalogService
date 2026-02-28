@@ -14,3 +14,13 @@ kafka:
 services:
   recomendations:
     url: http://localhost:8001
+management:
+  endpoints:
+    web:
+      exposure:
+        include: beans
+goods:
+  page:
+    size: 30
+  fallback:
+    categories_size: 7

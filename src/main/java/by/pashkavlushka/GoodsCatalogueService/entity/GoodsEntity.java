@@ -9,6 +9,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MapKeyColumn;
+import jakarta.persistence.NamedAttributeNode;
+import jakarta.persistence.NamedEntityGraph;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
@@ -20,6 +22,8 @@ import java.util.Map;
 @Entity
 @Table(name = "goods", schema = "online_shop")
 @SequenceGenerator(name = "goodsEntitySeq", sequenceName = "goods_entity_seq", schema = "online_shop", initialValue = 1, allocationSize = 1)
+//named entity graph
+@NamedEntityGraph(name = "goods_characteristics", attributeNodes = @NamedAttributeNode(value = "characteristics"))
 public class GoodsEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "goodsEntitySeq")

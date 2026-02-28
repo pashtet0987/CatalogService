@@ -3,8 +3,12 @@ package by.pashkavlushka.GoodsCatalogueService.service;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddGoodsRequest;
 import by.pashkavlushka.GoodsCatalogueService.dto.AddToCartRequest;
+import by.pashkavlushka.GoodsCatalogueService.dto.Category;
+import by.pashkavlushka.GoodsCatalogueService.dto.CriteriaGoodsRequest;
+import by.pashkavlushka.GoodsCatalogueService.dto.CriteriaGoodsResponse;
 import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsFeedback;
 import by.pashkavlushka.GoodsCatalogueService.dto.DeleteGoodsRequest;
+import by.pashkavlushka.GoodsCatalogueService.dto.Direction;
 import by.pashkavlushka.GoodsCatalogueService.dto.GoodsDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.RecomendationDTO;
 import by.pashkavlushka.GoodsCatalogueService.dto.UpdateGoodsFeedback;
@@ -38,6 +42,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import by.pashkavlushka.GoodsCatalogueService.repository.RollbackUpdateEventRepository;
+import org.springframework.data.jpa.domain.Specification;
 
 @Service
 public class GoodsServiceImpl implements GoodsService {
@@ -50,6 +55,8 @@ public class GoodsServiceImpl implements GoodsService {
     private final UpdateRequestMapper updateRequestMapper;
     private final GoodsRollbackMapper goodsRollbackMapper;
     private final RollbackUpdateEventRepository rollbackUpdateRepository;
+    private final String orderByFieldName;
+    private final int feedbackCategoriesSize;
 
     public GoodsServiceImpl(GoodsRepository goodsRepository,
             GoodsMapper parser,
@@ -57,8 +64,10 @@ public class GoodsServiceImpl implements GoodsService {
             @Value("${goods.page.size:30}") int defaultPageSize,
             UpdateRequestMapper updateRequestMapper,
             RollbackUpdateEventRepository rollbackUpdateRepository,
-            GoodsRollbackMapper goodsRollbackMapper) {
-        this.defaultPageable = PageRequest.of(0, defaultPageSize, Sort.by(List.of(Sort.Order.asc("cost"))));
+            GoodsRollbackMapper goodsRollbackMapper,
+            @Value("${goods.sort.field:cost}") String orderByFieldName, 
+            @Value("${goods.fallback.categories_size:5}") int feedbackCategoriesSize) {
+        this.defaultPageable = PageRequest.of(0, defaultPageSize, Sort.by(List.of(Sort.Order.asc(orderByFieldName))));
         this.goodsRepository = goodsRepository;
         this.goodsMapper = parser;
         this.entityManagerFactory = entityManagerFactory;
@@ -66,6 +75,8 @@ public class GoodsServiceImpl implements GoodsService {
         this.updateRequestMapper = updateRequestMapper;
         this.rollbackUpdateRepository = rollbackUpdateRepository;
         this.goodsRollbackMapper = goodsRollbackMapper;
+        this.orderByFieldName = orderByFieldName;
+        this.feedbackCategoriesSize = feedbackCategoriesSize;
     }
 
     @Transactional
@@ -111,8 +122,14 @@ public class GoodsServiceImpl implements GoodsService {
     }
 
     @Transactional
-    public List<GoodsDTO> findBySellerId(long sellerId, Pageable pageable) {
-        return findBySellerIdDefault(sellerId, pageable);
+    public List<GoodsDTO> findBySellerId(long sellerId, int pageNum, Direction direction, String orderBy) {
+        Sort sort = Sort.by(orderBy);
+        if(direction == Direction.ASC) {
+            sort = sort.ascending();
+        } else {
+            sort = sort.descending();
+        }
+        return findBySellerIdDefault(sellerId, PageRequest.of(pageNum, defaultPageSize, sort));
     }
 
     private List<GoodsDTO> findBySellerIdDefault(long sellerId, Pageable pageable) {
@@ -170,35 +187,44 @@ public class GoodsServiceImpl implements GoodsService {
 
     @Override
     @Transactional
-    public AddToCartRequest validateAddToCartRequest(AddToCartRequest request) throws EntityException {
+    public boolean validateAddToCartRequest(AddToCartRequest request) throws EntityException {
         GoodsEntity entity = goodsRepository.findById(request.getItemId()).orElseThrow(() -> new NotFoundEntityException());
         request.setCost(entity.getCost());
         request.setItemName(entity.getName());
-        if (rollbackUpdateRepository.findInFlightUpdatesByItemId(request.getItemId()) == 0) {
-            request.setStatus(true);
-        }
+        request.setSellerId(entity.getSellerId());
+        return rollbackUpdateRepository.findInFlightUpdatesByItemId(request.getItemId()) == 0;
+    }
 
-        return request;
+    //sorted by price asc
+    @Override
+    @Transactional
+    public List<GoodsDTO> findByRecomendations(List<RecomendationDTO> recomendations) {
+        return findByRecomendationsInner(recomendations, defaultPageable);
     }
 
     @Override
     @Transactional
-    public List<GoodsDTO> findByRecomendations(List<RecomendationDTO> recomendations) {
+    public List<GoodsDTO> findByRecomendations(List<RecomendationDTO> recomendations, int page) {
+        return findByRecomendationsInner(recomendations, PageRequest.of(page, defaultPageSize, Sort.by(orderByFieldName).ascending()));
+    }
+
+    private List<GoodsDTO> findByRecomendationsInner(List<RecomendationDTO> recomendations, Pageable pageable) {
         List<String> categories = recomendations.stream().map(RecomendationDTO::getCategory).toList();
 
-        return goodsRepository.findByCategories(categories, defaultPageable)
-                .getContent().stream().map(goodsMapper::entityToDTO).toList();
+        return goodsRepository.findByCategories(categories, pageable)
+                .getContent().stream().map(goodsMapper::entityToDTO).sorted((one, other) -> one.getCost() - other.getCost()).toList();
     }
 
     //used in fallback method, chooses by 5 random categories
+    //sorted by price asc
     @Override
-    public List<GoodsDTO> findForFallback() {
+    public List<GoodsDTO> findForFallback(int page) {
         List<String> categories = goodsRepository.findCategories();
         Collections.shuffle(categories);
-        categories = categories.stream().limit(5).toList();
-        List<GoodsEntity> result = goodsRepository.findByCategories(categories);
-        Collections.shuffle(result);
-        return result.stream().limit(defaultPageSize).map(goodsMapper::entityToDTO).toList();
+        categories = categories.stream().limit(feedbackCategoriesSize).toList();
+        List<GoodsEntity> result = goodsRepository.findByCategories(categories, PageRequest.of(page, defaultPageSize, Sort.by("cost").ascending())).getContent();
+        
+        return result.stream().map(goodsMapper::entityToDTO).toList();
     }
 
     @Override
@@ -246,7 +272,7 @@ public class GoodsServiceImpl implements GoodsService {
                 //сохраняем старую версию
                 //amount кладется в toAddAmount
                 GoodsToRollbackUpdateEntity rollbackUpdateEntity = goodsRollbackMapper.entityToRollbackEntity(entity);
-                
+
                 //добавляем количество к текущему
                 session.lock(entity, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
                 entity.setAmount(entity.getAmount() + updateRequest.getToAddAmount());
@@ -338,5 +364,78 @@ public class GoodsServiceImpl implements GoodsService {
         } finally {
             session.close();
         }
+    }
+
+    @Override
+    @Transactional
+    public CriteriaGoodsResponse fulfillCriteriaRequest(CriteriaGoodsRequest goodsRequest) {
+        CriteriaGoodsResponse resp = new CriteriaGoodsResponse();
+        List<Specification<GoodsEntity>> specs = new ArrayList<>();
+        Pageable pageable = defaultPageable;
+
+        if (goodsRequest.getNamePattern() != null && !goodsRequest.getNamePattern().isEmpty()) {
+            specs.add(GoodsSpecificationManager.byName(goodsRequest.getNamePattern()));
+            resp.setNamePattern(goodsRequest.getNamePattern());
+        } else {
+            resp.setNamePattern("");
+        }
+
+        if (goodsRequest.getCategories() != null && !goodsRequest.getCategories().isEmpty()) {
+            specs.add(GoodsSpecificationManager.byCategories(goodsRequest.getCategories()
+                    .stream().filter((el) -> el.isOn())
+                    .map(Category::getCategory).toList()));
+            resp.setCategories(goodsRequest.getCategories());
+        }
+
+        if (goodsRequest.getMinCost() != null) {
+            int value = goodsRequest.getMinCost();
+            specs.add(GoodsSpecificationManager.byMinPrice(value >= 0 ? value : 0));
+            resp.setMinCost(value);
+        }
+
+        if (goodsRequest.getMaxCost() != null) {
+            int value = goodsRequest.getMaxCost();
+            specs.add(GoodsSpecificationManager.byMaxPrice(value >= 0 ? value : 0));
+            resp.setMaxCost(value);
+        }
+
+        if (goodsRequest.getDirection() != null && goodsRequest.getOrderBy() != null && !goodsRequest.getOrderBy().isBlank()) {
+            Sort sort = null;
+            if (goodsRequest.getDirection().equals(Direction.ASC)) {
+                sort = Sort.by(List.of(Sort.Order.asc(goodsRequest.getOrderBy())));
+            } else {
+                sort = Sort.by(List.of(Sort.Order.desc(goodsRequest.getOrderBy())));
+            }
+            resp.setDirection(goodsRequest.getDirection());
+            resp.setOrderBy(goodsRequest.getOrderBy());
+            System.out.println("new page set with pagenum " + goodsRequest.getPageNumber());
+            pageable = PageRequest.of(goodsRequest.getPageNumber(), defaultPageSize, sort);
+        }
+
+        List<GoodsDTO> goods;
+        if (!specs.isEmpty()) {
+            Specification<GoodsEntity> resultSpecification = Specification.where(specs.getFirst());
+            resultSpecification = specs.stream()
+                    .skip(1)
+                    .reduce(resultSpecification, Specification::and, Specification::and);
+            goods = goodsRepository.findAll(resultSpecification, pageable).getContent()
+                    .stream().map(goodsMapper::entityToDTO).toList();
+        } else {
+            goods = goodsRepository.findAll(pageable).getContent()
+                    .stream().map(goodsMapper::entityToDTO).toList();
+        }
+        resp.setGoods(goods);
+        resp.setHasNextPage(goods.size() == defaultPageSize);
+        return resp;
+    }
+
+    @Override
+    public List<String> findCategories() {
+        return goodsRepository.findCategories();
+    }
+
+    @Override
+    public boolean hasNextPage(List<GoodsDTO> list) {
+        return list.size() == defaultPageSize;
     }
 }
